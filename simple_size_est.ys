@@ -1,0 +1,11 @@
+# Simple size estimation
+# Read all files one by one
+script read_files.ys
+
+# Basic synthesis
+hierarchy -check -auto-top
+proc; opt; fsm; opt; memory; opt
+techmap; opt
+
+# Statistics
+stat

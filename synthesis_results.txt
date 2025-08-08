@@ -1,0 +1,12 @@
+
+ /----------------------------------------------------------------------------\
+ |  yosys -- Yosys Open SYnthesis Suite                                       |
+ |  Copyright (C) 2012 - 2025  Claire Xenia Wolf <claire@yosyshq.com>         |
+ |  Distributed under an ISC-like license, type "license" to see terms        |
+ \----------------------------------------------------------------------------/
+ Yosys 0.55+194 (git sha1 bc0f70563, clang++ 18.1.8 -fPIC -O3)
+
+-- Executing script file `size_estimation.ys' --
+
+1. Executing Verilog-2005 frontend: ./vendor/cv32e40x/rtl/include/cv32e40x_pkg.sv
+./vendor/cv32e40x/rtl/include/cv32e40x_pkg.sv:627: ERROR: syntax error, unexpected OP_CAST

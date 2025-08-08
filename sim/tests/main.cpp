@@ -108,9 +108,9 @@ int main(int argc, char** argv) {
                 // ====================================================================================
                 // ---- ADDED CALLS TO PRINT MATRICES ON SUCCESS ----
                 // ====================================================================================
-                print_matrix(top, 0x70, "Matrix A (Input)");
-                print_matrix(top, 0x170, "Matrix B (Input)");
-                print_matrix(top, 0x270, "Matrix C (Result)");
+                print_matrix(top, 0x100, "Matrix A (Input)");
+                print_matrix(top, 0x140, "Matrix B (Input)");
+                print_matrix(top, 0x200, "Matrix C (Result)");
                 // ====================================================================================
 
                 // Run a few more cycles to ensure all signals propagate for waveform

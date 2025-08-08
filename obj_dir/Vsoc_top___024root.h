@@ -537,12 +537,17 @@ VL_MODULE(Vsoc_top___024root) {
         VlWide<8>/*255:0*/ soc_top__DOT__vpu_inst__DOT__vrf_rdata2;
         VlWide<8>/*255:0*/ soc_top__DOT__vpu_inst__DOT__vrf_rdata3;
         VlWide<8>/*255:0*/ soc_top__DOT__vpu_inst__DOT__vrf_wdata;
-        VlWide<8>/*255:0*/ soc_top__DOT__vpu_inst__DOT__vlsu_load_data;
         VlWide<8>/*255:0*/ soc_top__DOT__vpu_inst__DOT__mac_result_q;
+        VlWide<8>/*255:0*/ soc_top__DOT__vpu_inst__DOT__result_data_q;
         IData/*31:0*/ soc_top__DOT__vpu_inst__DOT__vrf_inst__DOT__unnamedblk1__DOT__i;
         IData/*31:0*/ soc_top__DOT__vpu_inst__DOT__vrf_inst__DOT__unnamedblk2__DOT__i;
-        IData/*31:0*/ soc_top__DOT__vpu_inst__DOT__vlsu_inst__DOT__addr_counter;
-        IData/*31:0*/ soc_top__DOT__vpu_inst__DOT__vlsu_inst__DOT__cycle_count;
+        IData/*31:0*/ soc_top__DOT__vpu_inst__DOT__vlsu_inst__DOT__current_addr;
+        VlWide<8>/*255:0*/ soc_top__DOT__vpu_inst__DOT__vlsu_inst__DOT__load_data_reg;
+        VlWide<8>/*255:0*/ soc_top__DOT__vpu_inst__DOT__vlsu_inst__DOT__store_data_q;
+        IData/*31:0*/ soc_top__DOT__vpu_inst__DOT__vmac_inst__DOT__unnamedblk1__DOT__unnamedblk2__DOT__a_val;
+        IData/*31:0*/ soc_top__DOT__vpu_inst__DOT__vmac_inst__DOT__unnamedblk1__DOT__unnamedblk2__DOT__b_val;
+        IData/*31:0*/ soc_top__DOT__vpu_inst__DOT__vmac_inst__DOT__unnamedblk1__DOT__unnamedblk2__DOT__c_val;
+        IData/*31:0*/ soc_top__DOT__vpu_inst__DOT__vmac_inst__DOT__unnamedblk1__DOT__unnamedblk2__DOT__res_val;
         VlWide<3>/*81:0*/ soc_top__DOT__vpu_mem_req;
         QData/*37:0*/ soc_top__DOT__vpu_mem_result;
         VlWide<12>/*352:0*/ soc_top__DOT__cpu_inst__DOT__id_ex_pipe;
@@ -551,13 +556,13 @@ VL_MODULE(Vsoc_top___024root) {
         VlWide<7>/*200:0*/ soc_top__DOT__cpu_inst__DOT__ctrl_fsm;
         QData/*34:0*/ soc_top__DOT__cpu_inst__DOT__if_stage_i__DOT__prefetch_instr;
         QData/*34:0*/ soc_top__DOT__cpu_inst__DOT__if_stage_i__DOT__instr_decompressed;
+    };
+    struct {
         QData/*37:0*/ soc_top__DOT__cpu_inst__DOT__if_stage_i__DOT__core_trans;
         QData/*34:0*/ soc_top__DOT__cpu_inst__DOT__if_stage_i__DOT__seq_instr;
         VlWide<4>/*104:0*/ soc_top__DOT__cpu_inst__DOT__if_stage_i__DOT__prefetch_unit_i__DOT__alignment_buffer_i__DOT__resp_q;
         QData/*34:0*/ soc_top__DOT__cpu_inst__DOT__if_stage_i__DOT__prefetch_unit_i__DOT__alignment_buffer_i__DOT__resp_n;
         VlWide<3>/*67:0*/ soc_top__DOT__cpu_inst__DOT__if_stage_i__DOT__mpu_i__DOT__pma_i__DOT__pma_cfg;
-    };
-    struct {
         QData/*37:0*/ soc_top__DOT__cpu_inst__DOT__if_stage_i__DOT__instruction_obi_i__DOT__obi_a_req_q;
         QData/*44:0*/ soc_top__DOT__cpu_inst__DOT__if_stage_i__DOT__gen_seq__DOT__sequencer_i__DOT__decode;
         QData/*54:0*/ soc_top__DOT__cpu_inst__DOT__id_stage_i__DOT__decoder_i__DOT__decoder_i_ctrl;
@@ -635,21 +640,6 @@ VL_MODULE(Vsoc_top___024root) {
         CData/*3:0*/ __Vfunc_mcontrol2_6_match_resolve__29__next_value;
         CData/*3:0*/ __Vfunc_mcontrol2_6_match_resolve__32__Vfuncout;
         CData/*3:0*/ __Vfunc_mcontrol2_6_match_resolve__32__next_value;
-        CData/*0:0*/ __Vdly__soc_top__DOT__vpu_mem_access_q;
-        CData/*0:0*/ __Vdly__soc_top__DOT__vpu_mem_we_q;
-        CData/*3:0*/ __Vdly__soc_top__DOT__vpu_mem_id_q;
-        CData/*0:0*/ __Vdlyvset__soc_top__DOT__memory__v0;
-        CData/*0:0*/ __Vdlyvset__soc_top__DOT__memory__v1;
-        CData/*0:0*/ __Vdlyvset__soc_top__DOT__memory__v2;
-        CData/*0:0*/ __Vdlyvset__soc_top__DOT__memory__v3;
-        CData/*0:0*/ __Vdly__soc_top__DOT__cpu_data_access_q;
-        CData/*0:0*/ __Vdlyvset__soc_top__DOT__memory__v4;
-        CData/*0:0*/ __Vdlyvset__soc_top__DOT__memory__v5;
-        CData/*0:0*/ __Vdlyvset__soc_top__DOT__memory__v6;
-        CData/*0:0*/ __Vdlyvset__soc_top__DOT__memory__v7;
-        CData/*0:0*/ __Vdly__soc_top__DOT__cpu_instr_access_q;
-        CData/*4:0*/ __Vdly__soc_top__DOT__vpu_inst__DOT__vlsu_inst__DOT__word_counter;
-        CData/*2:0*/ __Vdly__soc_top__DOT__vpu_inst__DOT__vlsu_inst__DOT__state;
         CData/*3:0*/ __Vdly__soc_top__DOT__cpu_inst__DOT__if_stage_i__DOT__gen_seq__DOT__sequencer_i__DOT__instr_cnt_q;
         CData/*0:0*/ __Vdlyvset__soc_top__DOT__cpu_inst__DOT__register_file_wrapper_i__DOT__register_file_i__DOT__mem__v1;
         CData/*0:0*/ __Vdlyvset__soc_top__DOT__cpu_inst__DOT__register_file_wrapper_i__DOT__register_file_i__DOT__mem__v2;
@@ -670,8 +660,6 @@ VL_MODULE(Vsoc_top___024root) {
         CData/*0:0*/ __Vdlyvset__soc_top__DOT__cpu_inst__DOT__register_file_wrapper_i__DOT__register_file_i__DOT__mem__v17;
         CData/*0:0*/ __Vdlyvset__soc_top__DOT__cpu_inst__DOT__register_file_wrapper_i__DOT__register_file_i__DOT__mem__v18;
         CData/*0:0*/ __Vdlyvset__soc_top__DOT__cpu_inst__DOT__register_file_wrapper_i__DOT__register_file_i__DOT__mem__v19;
-    };
-    struct {
         CData/*0:0*/ __Vdlyvset__soc_top__DOT__cpu_inst__DOT__register_file_wrapper_i__DOT__register_file_i__DOT__mem__v20;
         CData/*0:0*/ __Vdlyvset__soc_top__DOT__cpu_inst__DOT__register_file_wrapper_i__DOT__register_file_i__DOT__mem__v21;
         CData/*0:0*/ __Vdlyvset__soc_top__DOT__cpu_inst__DOT__register_file_wrapper_i__DOT__register_file_i__DOT__mem__v22;
@@ -687,6 +675,8 @@ VL_MODULE(Vsoc_top___024root) {
         CData/*0:0*/ __Vdlyvset__soc_top__DOT__cpu_inst__DOT__register_file_wrapper_i__DOT__register_file_i__DOT__mem__v32;
         CData/*0:0*/ __Vdlyvset__soc_top__DOT__cpu_inst__DOT__register_file_wrapper_i__DOT__register_file_i__DOT__mem__v33;
         CData/*0:0*/ __Vdlyvset__soc_top__DOT__cpu_inst__DOT__register_file_wrapper_i__DOT__register_file_i__DOT__mem__v34;
+    };
+    struct {
         CData/*0:0*/ __Vdlyvset__soc_top__DOT__cpu_inst__DOT__register_file_wrapper_i__DOT__register_file_i__DOT__mem__v35;
         CData/*0:0*/ __Vdlyvset__soc_top__DOT__cpu_inst__DOT__register_file_wrapper_i__DOT__register_file_i__DOT__mem__v36;
         CData/*0:0*/ __Vdlyvset__soc_top__DOT__cpu_inst__DOT__register_file_wrapper_i__DOT__register_file_i__DOT__mem__v37;
@@ -724,9 +714,8 @@ VL_MODULE(Vsoc_top___024root) {
         VlWide<6>/*191:0*/ __Vchglast__TOP__soc_top__DOT__cpu_inst__DOT__ex_stage_i__DOT__alu_i__DOT__alu_b_cpop_i__DOT__sum;
         CData/*0:0*/ __Vchglast__TOP__soc_top__DOT__cpu_inst__DOT__load_store_unit_i__DOT__wpt_trans_ready;
         CData/*0:0*/ __Vchglast__TOP__soc_top__DOT__cpu_inst__DOT__load_store_unit_i__DOT__wpt_resp_valid;
+        CData/*2:0*/ __Vchglast__TOP__soc_top__DOT__vpu_inst__DOT__vlsu_inst__DOT__next_state;
         SData/*8:0*/ soc_top__DOT____Vcellout__vpu_inst__xif_issue_resp_o;
-        IData/*31:0*/ __Vdly__soc_top__DOT__vpu_mem_addr_q;
-        IData/*31:0*/ __Vdly__soc_top__DOT__vpu_inst__DOT__vlsu_inst__DOT__cycle_count;
         IData/*17:0*/ __Vchglast__TOP__soc_top__DOT__cpu_inst__DOT__ctrl_byp;
         IData/*31:0*/ __Vchglast__TOP__soc_top__DOT__cpu_inst__DOT__ex_stage_i__DOT__alu_i__DOT__ff_one_i__DOT__sel_nodes;
         QData/*59:0*/ soc_top__DOT____Vcellout__vpu_inst__xif_result_o;
@@ -736,8 +725,6 @@ VL_MODULE(Vsoc_top___024root) {
         VlWide<3>/*80:0*/ soc_top__DOT__cpu_inst__DOT__load_store_unit_i__DOT____Vcellout__mpu_i__bus_trans_o;
         VlWide<3>/*70:0*/ soc_top__DOT__cpu_inst__DOT__load_store_unit_i__DOT____Vcellout__mpu_i__core_resp_o;
         VlWide<3>/*70:0*/ soc_top__DOT__cpu_inst__DOT__load_store_unit_i__DOT____Vcellout__align_check_i__core_resp_o;
-    };
-    struct {
         VlWide<7>/*200:0*/ __Vchglast__TOP__soc_top__DOT__cpu_inst__DOT__ctrl_fsm;
         QData/*44:0*/ __Vchglast__TOP__soc_top__DOT__cpu_inst__DOT__if_stage_i__DOT__gen_seq__DOT__sequencer_i__DOT__decode;
         VlUnpacked<IData/*31:0*/, 2> soc_top__DOT__cpu_inst__DOT____Vcellinp__id_stage_i__rf_rdata_i;
@@ -754,8 +741,10 @@ VL_MODULE(Vsoc_top___024root) {
         VlUnpacked<IData/*31:0*/, 1> soc_top__DOT__cpu_inst__DOT__register_file_wrapper_i__DOT____Vcellinp__register_file_i__wdata_i;
         VlUnpacked<CData/*4:0*/, 1> soc_top__DOT__cpu_inst__DOT__register_file_wrapper_i__DOT____Vcellinp__register_file_i__waddr_i;
         VlUnpacked<IData/*31:0*/, 2> soc_top__DOT__cpu_inst__DOT__register_file_wrapper_i__DOT____Vcellout__register_file_i__rdata_o;
+    };
+    struct {
         VlUnpacked<CData/*4:0*/, 2> soc_top__DOT__cpu_inst__DOT__register_file_wrapper_i__DOT____Vcellinp__register_file_i__raddr_i;
-        VlUnpacked<CData/*0:0*/, 6> __Vm_traceActivity;
+        VlUnpacked<CData/*0:0*/, 5> __Vm_traceActivity;
     };
 
     // INTERNAL VARIABLES

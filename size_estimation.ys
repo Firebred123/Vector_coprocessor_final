@@ -1,0 +1,82 @@
+# Size estimation for CV32E40X + Vector Coprocessor
+
+# Read CV32E40X package first (required by other modules)
+read_verilog -sv ./vendor/cv32e40x/rtl/include/cv32e40x_pkg.sv
+
+# Read main CV32E40X RTL files
+read_verilog -sv ./vendor/cv32e40x/rtl/cv32e40x_core.sv
+read_verilog -sv ./vendor/cv32e40x/rtl/cv32e40x_if_stage.sv
+read_verilog -sv ./vendor/cv32e40x/rtl/cv32e40x_id_stage.sv
+read_verilog -sv ./vendor/cv32e40x/rtl/cv32e40x_ex_stage.sv
+read_verilog -sv ./vendor/cv32e40x/rtl/cv32e40x_wb_stage.sv
+read_verilog -sv ./vendor/cv32e40x/rtl/cv32e40x_load_store_unit.sv
+read_verilog -sv ./vendor/cv32e40x/rtl/cv32e40x_cs_registers.sv
+read_verilog -sv ./vendor/cv32e40x/rtl/cv32e40x_controller.sv
+read_verilog -sv ./vendor/cv32e40x/rtl/cv32e40x_controller_fsm.sv
+read_verilog -sv ./vendor/cv32e40x/rtl/cv32e40x_controller_bypass.sv
+read_verilog -sv ./vendor/cv32e40x/rtl/cv32e40x_decoder.sv
+read_verilog -sv ./vendor/cv32e40x/rtl/cv32e40x_alu.sv
+read_verilog -sv ./vendor/cv32e40x/rtl/cv32e40x_mult.sv
+read_verilog -sv ./vendor/cv32e40x/rtl/cv32e40x_div.sv
+read_verilog -sv ./vendor/cv32e40x/rtl/cv32e40x_register_file.sv
+read_verilog -sv ./vendor/cv32e40x/rtl/cv32e40x_register_file_wrapper.sv
+read_verilog -sv ./vendor/cv32e40x/rtl/cv32e40x_prefetch_unit.sv
+read_verilog -sv ./vendor/cv32e40x/rtl/cv32e40x_prefetcher.sv
+read_verilog -sv ./vendor/cv32e40x/rtl/cv32e40x_compressed_decoder.sv
+read_verilog -sv ./vendor/cv32e40x/rtl/cv32e40x_int_controller.sv
+read_verilog -sv ./vendor/cv32e40x/rtl/cv32e40x_clic_int_controller.sv
+read_verilog -sv ./vendor/cv32e40x/rtl/cv32e40x_sleep_unit.sv
+read_verilog -sv ./vendor/cv32e40x/rtl/cv32e40x_sequencer.sv
+read_verilog -sv ./vendor/cv32e40x/rtl/cv32e40x_if_xif.sv
+
+# Read additional supporting modules
+read_verilog -sv ./vendor/cv32e40x/rtl/cv32e40x_alignment_buffer.sv
+read_verilog -sv ./vendor/cv32e40x/rtl/cv32e40x_instr_obi_interface.sv
+read_verilog -sv ./vendor/cv32e40x/rtl/cv32e40x_data_obi_interface.sv
+read_verilog -sv ./vendor/cv32e40x/rtl/cv32e40x_lsu_response_filter.sv
+read_verilog -sv ./vendor/cv32e40x/rtl/cv32e40x_write_buffer.sv
+read_verilog -sv ./vendor/cv32e40x/rtl/cv32e40x_pma.sv
+read_verilog -sv ./vendor/cv32e40x/rtl/cv32e40x_mpu.sv
+
+# Read your XIF package
+read_verilog -sv ./rtl/include/cv32e40x_xif_pkg.sv
+
+# Read your vector coprocessor files
+read_verilog -sv ./rtl/core/vector_reg_file.sv
+read_verilog -sv ./rtl/execution/vlsu.sv
+read_verilog -sv ./rtl/execution/vmac_unit.sv
+read_verilog -sv ./rtl/core/vector_coprocessor.sv
+
+# Read the SoC top level
+read_verilog -sv ./sim/soc_top.sv
+
+# Set hierarchy for the complete system
+hierarchy -check -top soc_top
+
+# Basic synthesis flow
+proc; opt; fsm; opt; memory; opt
+
+echo "=== COMPLETE SOC STATISTICS (CPU + Coprocessor) ==="
+stat -top soc_top
+
+echo "=== CV32E40X CPU CORE ONLY ==="
+stat -top cv32e40x_core
+
+echo "=== VECTOR COPROCESSOR ONLY ==="
+stat -top vector_coprocessor
+
+# Technology mapping for better gate-level estimates
+techmap; opt
+
+echo "=== AFTER TECHNOLOGY MAPPING ==="
+stat -top soc_top
+
+# Run ABC for area optimization and better estimates
+abc; opt
+
+echo "=== AFTER ABC OPTIMIZATION ==="
+stat -top soc_top
+
+echo "=== INDIVIDUAL MODULE STATISTICS ==="
+stat -top cv32e40x_core
+stat -top vector_coprocessor

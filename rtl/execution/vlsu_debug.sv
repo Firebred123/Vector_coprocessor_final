@@ -1,4 +1,4 @@
-// rtl/execution/vlsu.sv - Fixed timing for last word
+// Temporary debug version of vlsu.sv
 `include "custom_opcodes.vh"
 import cv32e40x_xif_pkg::*;
 
@@ -36,12 +36,11 @@ module vlsu #(
     localparam int WORDS_PER_VECTOR = VLEN / 32;
     
     // FSM states
-    typedef enum logic [2:0] {
-        IDLE = 3'b000,
-        LOAD_REQUEST = 3'b001,
-        LOAD_WAIT = 3'b010,
-        STORE = 3'b011,
-        LOAD_COMPLETE = 3'b100  // New state to ensure data is ready
+    typedef enum logic [1:0] {
+        IDLE = 2'b00,
+        LOAD_REQUEST = 2'b01,
+        LOAD_WAIT = 2'b10,
+        STORE = 2'b11
     } state_t;
     
     state_t state, next_state;
@@ -52,7 +51,7 @@ module vlsu #(
     logic is_load;
     
     // Vector accumulator for loads
-    logic [VLEN-1:0] load_data_reg;
+    logic [VLEN-1:0] load_data_accumulator;
     
     // Store data register
     logic [VLEN-1:0] store_data_q;
@@ -65,7 +64,7 @@ module vlsu #(
             current_addr <= '0;
             is_load <= 1'b0;
             store_data_q <= '0;
-            load_data_reg <= '0;
+            load_data_accumulator <= '0;
         end else begin
             state <= next_state;
             
@@ -75,7 +74,7 @@ module vlsu #(
                 current_addr <= base_addr_i;
                 is_load <= start_load_i;
                 store_data_q <= store_data_i;
-                load_data_reg <= '0;
+                load_data_accumulator <= '0;
                 
                 if (start_load_i) begin
                     $display("VLSU: Starting load from addr 0x%08x", base_addr_i);
@@ -89,7 +88,7 @@ module vlsu #(
             
             // Handle memory responses for loads
             if (state == LOAD_WAIT && xif_mem_result_valid_i && xif_mem_result_i.id == id_i) begin
-                load_data_reg[word_counter * 32 +: 32] <= xif_mem_result_i.rdata;
+                load_data_accumulator[word_counter * 32 +: 32] <= xif_mem_result_i.rdata;
                 $display("VLSU: Received data 0x%08x for word %0d", 
                          xif_mem_result_i.rdata, word_counter);
                 word_counter <= word_counter + 1;
@@ -128,16 +127,11 @@ module vlsu #(
             LOAD_WAIT: begin
                 if (xif_mem_result_valid_i && xif_mem_result_i.id == id_i) begin
                     if (word_counter == WORDS_PER_VECTOR - 1) begin
-                        next_state = LOAD_COMPLETE;  // Go to complete state
+                        next_state = IDLE;
                     end else begin
                         next_state = LOAD_REQUEST;
                     end
                 end
-            end
-            
-            LOAD_COMPLETE: begin
-                // One cycle delay to ensure data is registered
-                next_state = IDLE;
             end
             
             STORE: begin
@@ -145,15 +139,12 @@ module vlsu #(
                     next_state = IDLE;
                 end
             end
-            
-            default: next_state = IDLE;
         endcase
     end
     
     // Output assignments
-    assign done_o = (state == LOAD_COMPLETE) || 
-                    (state == STORE && next_state == IDLE);
-    assign load_data_o = load_data_reg;
+    assign done_o = (state != IDLE) && (next_state == IDLE);
+    assign load_data_o = load_data_accumulator;
     
     // Memory request interface
     assign xif_mem_valid_o = (state == LOAD_REQUEST) || (state == STORE);

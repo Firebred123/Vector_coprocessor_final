@@ -1,0 +1,3 @@
+ERROR: Command syntax error: Unexpected argument.
+> echo "# Auto-generated file list" > read_files.ys
+>                                   ^

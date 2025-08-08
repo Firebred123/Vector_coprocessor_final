@@ -24,10 +24,10 @@ extern const VlUnpacked<CData/*0:0*/, 64> Vsoc_top__ConstPool__TABLE_8e48073d_0;
 extern const VlUnpacked<CData/*0:0*/, 64> Vsoc_top__ConstPool__TABLE_d86bdde2_0;
 extern const VlUnpacked<CData/*0:0*/, 64> Vsoc_top__ConstPool__TABLE_9553c2b4_0;
 
-VL_INLINE_OPT void Vsoc_top___024root___combo__TOP__11(Vsoc_top___024root* vlSelf) {
+VL_INLINE_OPT void Vsoc_top___024root___combo__TOP__10(Vsoc_top___024root* vlSelf) {
     if (false && vlSelf) {}  // Prevent unused
     Vsoc_top__Syms* const __restrict vlSymsp VL_ATTR_UNUSED = vlSelf->vlSymsp;
-    VL_DEBUG_IF(VL_DBG_MSGF("+    Vsoc_top___024root___combo__TOP__11\n"); );
+    VL_DEBUG_IF(VL_DBG_MSGF("+    Vsoc_top___024root___combo__TOP__10\n"); );
     // Variables
     CData/*3:0*/ __Vfunc_get_stack_adj_base__0__rlist;
     CData/*3:0*/ __Vfunc_pushpop_reg_length__1__Vfuncout;
@@ -72,9 +72,6 @@ VL_INLINE_OPT void Vsoc_top___024root___combo__TOP__11(Vsoc_top___024root* vlSel
     CData/*31:0*/ __Vtemp212;
     CData/*31:0*/ __Vtemp218;
     // Body
-    vlSelf->soc_top__DOT__cpu_inst__DOT__if_stage_i__DOT__prefetch_resp_valid 
-        = ((IData)(vlSelf->soc_top__DOT__instr_rvalid) 
-           | (IData)(vlSelf->soc_top__DOT__cpu_inst__DOT__if_stage_i__DOT__mpu_i__DOT__mpu_err_trans_valid));
     vlSelf->soc_top__DOT__cpu_inst__DOT__cs_registers_i__DOT__hpm_events_raw 
         = ((0xfff8U & (IData)(vlSelf->soc_top__DOT__cpu_inst__DOT__cs_registers_i__DOT__hpm_events_raw)) 
            | (1U | ((4U & (vlSelf->soc_top__DOT__cpu_inst__DOT__ctrl_fsm[1U] 
@@ -119,6 +116,15 @@ VL_INLINE_OPT void Vsoc_top___024root___combo__TOP__11(Vsoc_top___024root* vlSel
         = ((0xfffffff0U & vlSelf->soc_top__DOT__cpu_inst__DOT__cs_registers_i__DOT__gen_debug_csr__DOT__dcsr_csr_i__DOT__rdata_q) 
            | ((8U & (vlSelf->soc_top__DOT__cpu_inst__DOT__ctrl_fsm[1U] 
                      >> 2U)) | (7U & vlSelf->soc_top__DOT__cpu_inst__DOT__cs_registers_i__DOT__gen_debug_csr__DOT__dcsr_csr_i__DOT__rdata_q)));
+    vlSelf->soc_top__DOT__cpu_inst__DOT__if_stage_i__DOT__prefetch_unit_i__DOT__alignment_buffer_i__DOT__n_flush_branch 
+        = vlSelf->soc_top__DOT__cpu_inst__DOT__if_stage_i__DOT__prefetch_unit_i__DOT__alignment_buffer_i__DOT__outstanding_cnt_q;
+    if ((0x10000U & vlSelf->soc_top__DOT__cpu_inst__DOT__ctrl_fsm[0U])) {
+        if (vlSelf->soc_top__DOT__cpu_inst__DOT__if_stage_i__DOT__prefetch_resp_valid) {
+            vlSelf->soc_top__DOT__cpu_inst__DOT__if_stage_i__DOT__prefetch_unit_i__DOT__alignment_buffer_i__DOT__n_flush_branch 
+                = (3U & ((IData)(vlSelf->soc_top__DOT__cpu_inst__DOT__if_stage_i__DOT__prefetch_unit_i__DOT__alignment_buffer_i__DOT__outstanding_cnt_q) 
+                         - (IData)(1U)));
+        }
+    }
     vlSelf->soc_top__DOT__cpu_inst__DOT__if_stage_i__DOT__prefetch_unit_i__DOT__fetch_valid 
         = ((((vlSelf->soc_top__DOT__cpu_inst__DOT__ctrl_fsm[6U] 
               >> 7U) & (2U > (IData)(vlSelf->soc_top__DOT__cpu_inst__DOT__if_stage_i__DOT__prefetch_unit_i__DOT__alignment_buffer_i__DOT__outstanding_cnt_q))) 
@@ -149,6 +155,9 @@ VL_INLINE_OPT void Vsoc_top___024root___combo__TOP__11(Vsoc_top___024root* vlSel
         = (((IData)(vlSelf->soc_top__DOT__cpu_inst__DOT__load_store_unit_i__DOT__last_q) 
             & (IData)(vlSelf->soc_top__DOT__cpu_inst__DOT__load_store_unit_i__DOT__wpt_resp_valid)) 
            & (IData)(vlSelf->soc_top__DOT__cpu_inst__DOT__load_store_unit_i__DOT__xif_res_q));
+    vlSelf->soc_top__DOT__cpu_inst__DOT__if_stage_i__DOT__prefetch_unit_i__DOT__alignment_buffer_i__DOT__resp_valid_gated 
+        = ((0U >= (IData)(vlSelf->soc_top__DOT__cpu_inst__DOT__if_stage_i__DOT__prefetch_unit_i__DOT__alignment_buffer_i__DOT__n_flush_q)) 
+           & (IData)(vlSelf->soc_top__DOT__cpu_inst__DOT__if_stage_i__DOT__prefetch_resp_valid));
     vlSelf->soc_top__DOT__cpu_inst__DOT__cs_registers_i__DOT__debug_triggers_i__DOT__gen_triggers__DOT__tdata1_we_hit = 0U;
     if ((0x4000U & vlSelf->soc_top__DOT__cpu_inst__DOT__ctrl_fsm[3U])) {
         if ((6U == (vlSelf->soc_top__DOT__cpu_inst__DOT__cs_registers_i__DOT__debug_triggers_i__DOT__gen_triggers__DOT__tdata1_rdata
@@ -2014,18 +2023,6 @@ VL_INLINE_OPT void Vsoc_top___024root___combo__TOP__11(Vsoc_top___024root* vlSel
         = ((1U & vlSelf->soc_top__DOT__cpu_inst__DOT__ex_stage_i__DOT__alu_i__DOT__ff_one_i__DOT__sel_nodes)
             ? (0x1fU & vlSelf->soc_top__DOT__cpu_inst__DOT__ex_stage_i__DOT__alu_i__DOT__ff_one_i__DOT__index_nodes[0U])
             : 0x20U);
-    vlSelf->soc_top__DOT__cpu_inst__DOT__if_stage_i__DOT__prefetch_unit_i__DOT__alignment_buffer_i__DOT__n_flush_branch 
-        = vlSelf->soc_top__DOT__cpu_inst__DOT__if_stage_i__DOT__prefetch_unit_i__DOT__alignment_buffer_i__DOT__outstanding_cnt_q;
-    if ((0x10000U & vlSelf->soc_top__DOT__cpu_inst__DOT__ctrl_fsm[0U])) {
-        if (vlSelf->soc_top__DOT__cpu_inst__DOT__if_stage_i__DOT__prefetch_resp_valid) {
-            vlSelf->soc_top__DOT__cpu_inst__DOT__if_stage_i__DOT__prefetch_unit_i__DOT__alignment_buffer_i__DOT__n_flush_branch 
-                = (3U & ((IData)(vlSelf->soc_top__DOT__cpu_inst__DOT__if_stage_i__DOT__prefetch_unit_i__DOT__alignment_buffer_i__DOT__outstanding_cnt_q) 
-                         - (IData)(1U)));
-        }
-    }
-    vlSelf->soc_top__DOT__cpu_inst__DOT__if_stage_i__DOT__prefetch_unit_i__DOT__alignment_buffer_i__DOT__resp_valid_gated 
-        = ((0U >= (IData)(vlSelf->soc_top__DOT__cpu_inst__DOT__if_stage_i__DOT__prefetch_unit_i__DOT__alignment_buffer_i__DOT__n_flush_q)) 
-           & (IData)(vlSelf->soc_top__DOT__cpu_inst__DOT__if_stage_i__DOT__prefetch_resp_valid));
     vlSelf->soc_top__DOT__cpu_inst__DOT__cs_registers_i__DOT__hpm_events 
         = ((0xffc0U & (IData)(vlSelf->soc_top__DOT__cpu_inst__DOT__cs_registers_i__DOT__hpm_events)) 
            | (0x3fU & (IData)(vlSelf->soc_top__DOT__cpu_inst__DOT__cs_registers_i__DOT__hpm_events_raw)));
@@ -2947,6 +2944,17 @@ VL_INLINE_OPT void Vsoc_top___024root___combo__TOP__11(Vsoc_top___024root* vlSel
                           << 0xdU) | (0xffffe000U & 
                                       (vlSelf->soc_top__DOT__cpu_inst__DOT__cs_registers_i__DOT__dcsr_rdata 
                                        << 0xbU)))));
+    vlSelf->soc_top__DOT__cpu_inst__DOT__if_stage_i__DOT__prefetch_unit_i__DOT__alignment_buffer_i__DOT__n_flush_n 
+        = vlSelf->soc_top__DOT__cpu_inst__DOT__if_stage_i__DOT__prefetch_unit_i__DOT__alignment_buffer_i__DOT__n_flush_q;
+    if ((0x40U & vlSelf->soc_top__DOT__cpu_inst__DOT__ctrl_fsm[6U])) {
+        vlSelf->soc_top__DOT__cpu_inst__DOT__if_stage_i__DOT__prefetch_unit_i__DOT__alignment_buffer_i__DOT__n_flush_n 
+            = vlSelf->soc_top__DOT__cpu_inst__DOT__if_stage_i__DOT__prefetch_unit_i__DOT__alignment_buffer_i__DOT__n_flush_branch;
+    } else if (((IData)(vlSelf->soc_top__DOT__cpu_inst__DOT__if_stage_i__DOT__prefetch_resp_valid) 
+                & (0U < (IData)(vlSelf->soc_top__DOT__cpu_inst__DOT__if_stage_i__DOT__prefetch_unit_i__DOT__alignment_buffer_i__DOT__n_flush_q)))) {
+        vlSelf->soc_top__DOT__cpu_inst__DOT__if_stage_i__DOT__prefetch_unit_i__DOT__alignment_buffer_i__DOT__n_flush_n 
+            = (3U & ((IData)(vlSelf->soc_top__DOT__cpu_inst__DOT__if_stage_i__DOT__prefetch_unit_i__DOT__alignment_buffer_i__DOT__n_flush_q) 
+                     - (IData)(1U)));
+    }
     vlSelf->soc_top__DOT__cpu_inst__DOT__if_stage_i__DOT__prefetch_unit_i__DOT__prefetcher_i__DOT__next_state 
         = vlSelf->soc_top__DOT__cpu_inst__DOT__if_stage_i__DOT__prefetch_unit_i__DOT__prefetcher_i__DOT__state_q;
     if (vlSelf->soc_top__DOT__cpu_inst__DOT__if_stage_i__DOT__prefetch_unit_i__DOT__prefetcher_i__DOT__state_q) {
@@ -2964,6 +2972,31 @@ VL_INLINE_OPT void Vsoc_top___024root___combo__TOP__11(Vsoc_top___024root* vlSel
     vlSelf->soc_top__DOT__cpu_inst__DOT__if_stage_i__DOT__prefetch_unit_i__DOT__fetch_ready 
         = ((IData)(vlSelf->soc_top__DOT__cpu_inst__DOT__if_stage_i__DOT__prefetch_unit_i__DOT__fetch_valid) 
            & (IData)(vlSelf->soc_top__DOT__cpu_inst__DOT__if_stage_i__DOT__prefetch_trans_ready));
+    vlSelf->soc_top__DOT__cpu_inst__DOT__if_stage_i__DOT__prefetch_unit_i__DOT__alignment_buffer_i__DOT__wptr_n 
+        = vlSelf->soc_top__DOT__cpu_inst__DOT__if_stage_i__DOT__prefetch_unit_i__DOT__alignment_buffer_i__DOT__wptr;
+    if (vlSelf->soc_top__DOT__cpu_inst__DOT__if_stage_i__DOT__prefetch_unit_i__DOT__alignment_buffer_i__DOT__resp_valid_gated) {
+        vlSelf->soc_top__DOT__cpu_inst__DOT__if_stage_i__DOT__prefetch_unit_i__DOT__alignment_buffer_i__DOT__wptr_n 
+            = ((2U > (IData)(vlSelf->soc_top__DOT__cpu_inst__DOT__if_stage_i__DOT__prefetch_unit_i__DOT__alignment_buffer_i__DOT__wptr))
+                ? (3U & ((IData)(1U) + (IData)(vlSelf->soc_top__DOT__cpu_inst__DOT__if_stage_i__DOT__prefetch_unit_i__DOT__alignment_buffer_i__DOT__wptr)))
+                : 0U);
+    }
+    vlSelf->soc_top__DOT__cpu_inst__DOT__if_stage_i__DOT__prefetch_unit_i__DOT__alignment_buffer_i__DOT__valid_int 
+        = vlSelf->soc_top__DOT__cpu_inst__DOT__if_stage_i__DOT__prefetch_unit_i__DOT__alignment_buffer_i__DOT__valid_q;
+    if (vlSelf->soc_top__DOT__cpu_inst__DOT__if_stage_i__DOT__prefetch_unit_i__DOT__alignment_buffer_i__DOT__resp_valid_gated) {
+        vlSelf->soc_top__DOT__cpu_inst__DOT__if_stage_i__DOT__prefetch_unit_i__DOT__alignment_buffer_i__DOT____Vlvbound1 = 1U;
+        if ((2U >= (IData)(vlSelf->soc_top__DOT__cpu_inst__DOT__if_stage_i__DOT__prefetch_unit_i__DOT__alignment_buffer_i__DOT__wptr))) {
+            vlSelf->soc_top__DOT__cpu_inst__DOT__if_stage_i__DOT__prefetch_unit_i__DOT__alignment_buffer_i__DOT__valid_int 
+                = (((~ ((IData)(1U) << (IData)(vlSelf->soc_top__DOT__cpu_inst__DOT__if_stage_i__DOT__prefetch_unit_i__DOT__alignment_buffer_i__DOT__wptr))) 
+                    & (IData)(vlSelf->soc_top__DOT__cpu_inst__DOT__if_stage_i__DOT__prefetch_unit_i__DOT__alignment_buffer_i__DOT__valid_int)) 
+                   | (7U & ((IData)(vlSelf->soc_top__DOT__cpu_inst__DOT__if_stage_i__DOT__prefetch_unit_i__DOT__alignment_buffer_i__DOT____Vlvbound1) 
+                            << (IData)(vlSelf->soc_top__DOT__cpu_inst__DOT__if_stage_i__DOT__prefetch_unit_i__DOT__alignment_buffer_i__DOT__wptr))));
+        }
+    }
+    vlSelf->soc_top__DOT__cpu_inst__DOT__if_stage_i__DOT__prefetch_unit_i__DOT__alignment_buffer_i__DOT__valid 
+        = (((2U >= (IData)(vlSelf->soc_top__DOT__cpu_inst__DOT__if_stage_i__DOT__prefetch_unit_i__DOT__alignment_buffer_i__DOT__rptr)) 
+            & ((IData)(vlSelf->soc_top__DOT__cpu_inst__DOT__if_stage_i__DOT__prefetch_unit_i__DOT__alignment_buffer_i__DOT__valid_q) 
+               >> (IData)(vlSelf->soc_top__DOT__cpu_inst__DOT__if_stage_i__DOT__prefetch_unit_i__DOT__alignment_buffer_i__DOT__rptr))) 
+           | (IData)(vlSelf->soc_top__DOT__cpu_inst__DOT__if_stage_i__DOT__prefetch_unit_i__DOT__alignment_buffer_i__DOT__resp_valid_gated));
     vlSelf->soc_top__DOT__cpu_inst__DOT__wb_stage_i__DOT__lsu_valid 
         = ((IData)(vlSelf->soc_top__DOT__cpu_inst__DOT__wb_stage_i__DOT__lsu_valid_q)
             ? (IData)(vlSelf->soc_top__DOT__cpu_inst__DOT__wb_stage_i__DOT__lsu_valid_q)
@@ -3119,42 +3152,6 @@ VL_INLINE_OPT void Vsoc_top___024root___combo__TOP__11(Vsoc_top___024root* vlSel
                                         >> 0x18U)))
                          : (0x1fU & (vlSelf->soc_top__DOT__cpu_inst__DOT__id_ex_pipe[8U] 
                                      >> 0x18U)))));
-    vlSelf->soc_top__DOT__cpu_inst__DOT__if_stage_i__DOT__prefetch_unit_i__DOT__alignment_buffer_i__DOT__n_flush_n 
-        = vlSelf->soc_top__DOT__cpu_inst__DOT__if_stage_i__DOT__prefetch_unit_i__DOT__alignment_buffer_i__DOT__n_flush_q;
-    if ((0x40U & vlSelf->soc_top__DOT__cpu_inst__DOT__ctrl_fsm[6U])) {
-        vlSelf->soc_top__DOT__cpu_inst__DOT__if_stage_i__DOT__prefetch_unit_i__DOT__alignment_buffer_i__DOT__n_flush_n 
-            = vlSelf->soc_top__DOT__cpu_inst__DOT__if_stage_i__DOT__prefetch_unit_i__DOT__alignment_buffer_i__DOT__n_flush_branch;
-    } else if (((IData)(vlSelf->soc_top__DOT__cpu_inst__DOT__if_stage_i__DOT__prefetch_resp_valid) 
-                & (0U < (IData)(vlSelf->soc_top__DOT__cpu_inst__DOT__if_stage_i__DOT__prefetch_unit_i__DOT__alignment_buffer_i__DOT__n_flush_q)))) {
-        vlSelf->soc_top__DOT__cpu_inst__DOT__if_stage_i__DOT__prefetch_unit_i__DOT__alignment_buffer_i__DOT__n_flush_n 
-            = (3U & ((IData)(vlSelf->soc_top__DOT__cpu_inst__DOT__if_stage_i__DOT__prefetch_unit_i__DOT__alignment_buffer_i__DOT__n_flush_q) 
-                     - (IData)(1U)));
-    }
-    vlSelf->soc_top__DOT__cpu_inst__DOT__if_stage_i__DOT__prefetch_unit_i__DOT__alignment_buffer_i__DOT__wptr_n 
-        = vlSelf->soc_top__DOT__cpu_inst__DOT__if_stage_i__DOT__prefetch_unit_i__DOT__alignment_buffer_i__DOT__wptr;
-    if (vlSelf->soc_top__DOT__cpu_inst__DOT__if_stage_i__DOT__prefetch_unit_i__DOT__alignment_buffer_i__DOT__resp_valid_gated) {
-        vlSelf->soc_top__DOT__cpu_inst__DOT__if_stage_i__DOT__prefetch_unit_i__DOT__alignment_buffer_i__DOT__wptr_n 
-            = ((2U > (IData)(vlSelf->soc_top__DOT__cpu_inst__DOT__if_stage_i__DOT__prefetch_unit_i__DOT__alignment_buffer_i__DOT__wptr))
-                ? (3U & ((IData)(1U) + (IData)(vlSelf->soc_top__DOT__cpu_inst__DOT__if_stage_i__DOT__prefetch_unit_i__DOT__alignment_buffer_i__DOT__wptr)))
-                : 0U);
-    }
-    vlSelf->soc_top__DOT__cpu_inst__DOT__if_stage_i__DOT__prefetch_unit_i__DOT__alignment_buffer_i__DOT__valid_int 
-        = vlSelf->soc_top__DOT__cpu_inst__DOT__if_stage_i__DOT__prefetch_unit_i__DOT__alignment_buffer_i__DOT__valid_q;
-    if (vlSelf->soc_top__DOT__cpu_inst__DOT__if_stage_i__DOT__prefetch_unit_i__DOT__alignment_buffer_i__DOT__resp_valid_gated) {
-        vlSelf->soc_top__DOT__cpu_inst__DOT__if_stage_i__DOT__prefetch_unit_i__DOT__alignment_buffer_i__DOT____Vlvbound1 = 1U;
-        if ((2U >= (IData)(vlSelf->soc_top__DOT__cpu_inst__DOT__if_stage_i__DOT__prefetch_unit_i__DOT__alignment_buffer_i__DOT__wptr))) {
-            vlSelf->soc_top__DOT__cpu_inst__DOT__if_stage_i__DOT__prefetch_unit_i__DOT__alignment_buffer_i__DOT__valid_int 
-                = (((~ ((IData)(1U) << (IData)(vlSelf->soc_top__DOT__cpu_inst__DOT__if_stage_i__DOT__prefetch_unit_i__DOT__alignment_buffer_i__DOT__wptr))) 
-                    & (IData)(vlSelf->soc_top__DOT__cpu_inst__DOT__if_stage_i__DOT__prefetch_unit_i__DOT__alignment_buffer_i__DOT__valid_int)) 
-                   | (7U & ((IData)(vlSelf->soc_top__DOT__cpu_inst__DOT__if_stage_i__DOT__prefetch_unit_i__DOT__alignment_buffer_i__DOT____Vlvbound1) 
-                            << (IData)(vlSelf->soc_top__DOT__cpu_inst__DOT__if_stage_i__DOT__prefetch_unit_i__DOT__alignment_buffer_i__DOT__wptr))));
-        }
-    }
-    vlSelf->soc_top__DOT__cpu_inst__DOT__if_stage_i__DOT__prefetch_unit_i__DOT__alignment_buffer_i__DOT__valid 
-        = (((2U >= (IData)(vlSelf->soc_top__DOT__cpu_inst__DOT__if_stage_i__DOT__prefetch_unit_i__DOT__alignment_buffer_i__DOT__rptr)) 
-            & ((IData)(vlSelf->soc_top__DOT__cpu_inst__DOT__if_stage_i__DOT__prefetch_unit_i__DOT__alignment_buffer_i__DOT__valid_q) 
-               >> (IData)(vlSelf->soc_top__DOT__cpu_inst__DOT__if_stage_i__DOT__prefetch_unit_i__DOT__alignment_buffer_i__DOT__rptr))) 
-           | (IData)(vlSelf->soc_top__DOT__cpu_inst__DOT__if_stage_i__DOT__prefetch_unit_i__DOT__alignment_buffer_i__DOT__resp_valid_gated));
     vlSelf->soc_top__DOT__cpu_inst__DOT__controller_i__DOT__controller_fsm_i__DOT__interrupt_allowed 
         = ((((((((IData)(vlSelf->soc_top__DOT__cpu_inst__DOT__lsu_interruptible) 
                  & (IData)(vlSelf->soc_top__DOT__cpu_inst__DOT__controller_i__DOT__controller_fsm_i__DOT__debug_interruptible)) 

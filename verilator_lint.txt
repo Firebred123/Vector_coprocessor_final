@@ -1,0 +1,100 @@
+%Error: rtl/core/vector_coprocessor.sv:2:10: Cannot find include file: 'custom_opcodes.vh'
+    2 | `include "custom_opcodes.vh"
+      |          ^~~~~~~~~~~~~~~~~~~
+        ... See the manual at https://verilator.org/verilator_doc.html?v=5.039 for more assistance.
+        ... Looked in:
+             vendor/cv32e40x/rtl/include/custom_opcodes.vh
+             vendor/cv32e40x/rtl/include/custom_opcodes.vh.v
+             vendor/cv32e40x/rtl/include/custom_opcodes.vh.sv
+             rtl/include/custom_opcodes.vh
+             rtl/include/custom_opcodes.vh.v
+             rtl/include/custom_opcodes.vh.sv
+             custom_opcodes.vh
+             custom_opcodes.vh.v
+             custom_opcodes.vh.sv
+             obj_dir/custom_opcodes.vh
+             obj_dir/custom_opcodes.vh.v
+             obj_dir/custom_opcodes.vh.sv
+%Error: rtl/core/vector_coprocessor.sv:71:42: Define or directive not defined: '`FUNCT7_VLD'
+   71 |             if (vlsu_done && funct7_q == `FUNCT7_VLD) begin
+      |                                          ^~~~~~~~~~~
+%Error: rtl/core/vector_coprocessor.sv:71:53: syntax error, unexpected ')', expecting IDENTIFIER-for-type
+   71 |             if (vlsu_done && funct7_q == `FUNCT7_VLD) begin
+      |                                                     ^
+%Error: rtl/core/vector_coprocessor.sv:76:13: syntax error, unexpected else
+   76 |             else if (vmac_done && funct7_q == `FUNCT7_VMAC) begin
+      |             ^~~~
+%Error: rtl/core/vector_coprocessor.sv:76:47: Define or directive not defined: '`FUNCT7_VMAC'
+   76 |             else if (vmac_done && funct7_q == `FUNCT7_VMAC) begin
+      |                                               ^~~~~~~~~~~~
+%Error: rtl/core/vector_coprocessor.sv:80:9: syntax error, unexpected end
+   80 |         end
+      |         ^~~
+%Error: rtl/core/vector_coprocessor.sv:88:41: Define or directive not defined: '`OPCODE_CUSTOM0'
+   88 |     assign is_custom_instr = (opcode == `OPCODE_CUSTOM0);
+      |                                         ^~~~~~~~~~~~~~~
+%Error: rtl/core/vector_coprocessor.sv:88:56: syntax error, unexpected ')', expecting IDENTIFIER-for-type
+   88 |     assign is_custom_instr = (opcode == `OPCODE_CUSTOM0);
+      |                                                        ^
+%Error: rtl/core/vector_coprocessor.sv:98:75: Define or directive not defined: '`FUNCT7_VST'
+   98 |             xif_issue_resp_o.writeback = (xif_issue_req_i.instr[31:25] != `FUNCT7_VST);
+      |                                                                           ^~~~~~~~~~~
+%Error: rtl/core/vector_coprocessor.sv:98:86: syntax error, unexpected ')', expecting IDENTIFIER-for-type
+   98 |             xif_issue_resp_o.writeback = (xif_issue_req_i.instr[31:25] != `FUNCT7_VST);
+      |                                                                                      ^
+%Error: rtl/core/vector_coprocessor.sv:99:75: Define or directive not defined: '`FUNCT7_VLD'
+   99 |             xif_issue_resp_o.loadstore = (xif_issue_req_i.instr[31:25] == `FUNCT7_VLD) ||
+      |                                                                           ^~~~~~~~~~~
+%Error: rtl/core/vector_coprocessor.sv:99:86: syntax error, unexpected ')', expecting IDENTIFIER-for-type
+   99 |             xif_issue_resp_o.loadstore = (xif_issue_req_i.instr[31:25] == `FUNCT7_VLD) ||
+      |                                                                                      ^
+%Error: rtl/core/vector_coprocessor.sv:100:75: Define or directive not defined: '`FUNCT7_VST'
+  100 |                                          (xif_issue_req_i.instr[31:25] == `FUNCT7_VST);
+      |                                                                           ^~~~~~~~~~~
+%Error: rtl/core/vector_coprocessor.sv:111:40: Define or directive not defined: '`FUNCT7_VST'
+  111 |         xif_result_o.we = (funct7_q != `FUNCT7_VST) ? 1'b1 : 1'b0;
+      |                                        ^~~~~~~~~~~
+%Error: rtl/core/vector_coprocessor.sv:111:51: syntax error, unexpected ')', expecting IDENTIFIER-for-type
+  111 |         xif_result_o.we = (funct7_q != `FUNCT7_VST) ? 1'b1 : 1'b0;
+      |                                                   ^
+%Error: rtl/core/vector_coprocessor.sv:143:50: Define or directive not defined: '`FUNCT7_VLD'
+  143 |         .start_load_i(vlsu_start && (funct7_q == `FUNCT7_VLD)),
+      |                                                  ^~~~~~~~~~~
+%Error: rtl/core/vector_coprocessor.sv:143:61: syntax error, unexpected ')', expecting IDENTIFIER-for-type
+  143 |         .start_load_i(vlsu_start && (funct7_q == `FUNCT7_VLD)),
+      |                                                             ^
+%Error: rtl/core/vector_coprocessor.sv:144:51: Define or directive not defined: '`FUNCT7_VST'
+  144 |         .start_store_i(vlsu_start && (funct7_q == `FUNCT7_VST)),
+      |                                                   ^~~~~~~~~~~
+%Error: rtl/core/vector_coprocessor.sv:215:21: Define or directive not defined: '`FUNCT7_VLD'
+  215 |                     `FUNCT7_VLD, `FUNCT7_VST: next_state = START_LSU;
+      |                     ^~~~~~~~~~~
+%Error: rtl/core/vector_coprocessor.sv:215:32: syntax error, unexpected ',', expecting IDENTIFIER-for-type
+  215 |                     `FUNCT7_VLD, `FUNCT7_VST: next_state = START_LSU;
+      |                                ^
+%Error: rtl/core/vector_coprocessor.sv:215:34: Define or directive not defined: '`FUNCT7_VST'
+  215 |                     `FUNCT7_VLD, `FUNCT7_VST: next_state = START_LSU;
+      |                                  ^~~~~~~~~~~
+%Error: rtl/core/vector_coprocessor.sv:216:21: Define or directive not defined: '`FUNCT7_VMAC'
+  216 |                     `FUNCT7_VMAC:              next_state = START_MAC;
+      |                     ^~~~~~~~~~~~
+%Error: rtl/core/vector_coprocessor.sv:228:37: Define or directive not defined: '`FUNCT7_VLD'
+  228 |                     if (funct7_q == `FUNCT7_VLD) begin
+      |                                     ^~~~~~~~~~~
+%Error: rtl/core/vector_coprocessor.sv:228:48: syntax error, unexpected ')', expecting IDENTIFIER-for-type
+  228 |                     if (funct7_q == `FUNCT7_VLD) begin
+      |                                                ^
+%Error: rtl/core/vector_coprocessor.sv:234:13: syntax error, unexpected end, expecting IDENTIFIER-for-type
+  234 |             end
+      |             ^~~
+%Error: rtl/core/vector_coprocessor.sv:243:27: syntax error, unexpected '=', expecting '('
+  243 |                 vrf_wdata = result_data_q;
+      |                           ^
+%Error: rtl/core/vector_coprocessor.sv:253:32: syntax error, unexpected '=', expecting '('
+  253 |                     next_state = IDLE;
+      |                                ^
+%Error: rtl/core/vector_coprocessor.sv:257:20: syntax error, unexpected ':', expecting clocking or disable
+  257 |             default: next_state = IDLE;
+      |                    ^
+%Error: Cannot continue
+        ... This fatal error may be caused by the earlier error(s); resolve those first.

@@ -1,0 +1,5 @@
+# Generate the read commands
+echo "# Auto-generated file list" > read_files.ys
+find ./cv32e40x -name "*.sv" -type f | sed 's/^/read_verilog -sv /' >> read_files.ys
+find ./your_coprocessor -name "*.v" -o -name "*.sv" -type f | sed 's/^/read_verilog -sv /' >> read_files.ys
+echo "read_verilog -sv ./top.sv" >> read_files.ys

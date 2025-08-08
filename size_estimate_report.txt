@@ -1,0 +1,97 @@
+=== RISC-V CPU + Vector Coprocessor Size Estimation ===
+Generated on: Wed Aug  6 17:27:19 UTC 2025
+
+=== CV32E40X CPU Analysis ===
+Number of RTL files: 44
+CV32E40X CPU total lines: 15433
+CV32E40X CPU logic lines: 9173
+CV32E40X CPU always blocks: 139
+CV32E40X CPU register arrays: 477
+
+CV32E40X CPU estimated gates: 3669.2000000000000000000000 gates
+
+=== Vector Coprocessor Analysis ===
+Number of RTL files: 5
+Vector Coprocessor total lines: 571
+Vector Coprocessor logic lines: 419
+Vector Coprocessor always blocks: 11
+Vector Coprocessor register arrays: 44
+
+Vector Coprocessor estimated gates: 167.6000000000000000000000 gates
+
+=== Combined System Statistics ===
+Total logic lines: 
+Total estimated gates: 00 gates
+
+=== Silicon Area Estimation ===
+Technology node estimates (including routing and overhead):
+28nm technology: ~ mm²
+65nm technology: ~ mm²
+180nm technology: ~ mm²
+
+=== Rough Power Estimation ===
+28nm @ 1GHz: ~ mW
+65nm @ 500MHz: ~ mW
+180nm @ 100MHz: ~ mW
+
+=== Detailed File Analysis ===
+--- CV32E40X CPU Files ---
+cv32e40x_pc_target.sv                                 54 lines (  26 logic,  1 always)
+cv32e40x_pma.sv                                      141 lines (  79 logic,  3 always)
+cv32e40x_register_file.sv                            122 lines (  58 logic,  2 always)
+cv32e40x_core.sv                                    1153 lines ( 696 logic,  0 always)
+cv32e40x_load_store_unit.sv                          970 lines ( 597 logic, 14 always)
+cv32e40x_int_controller.sv                           125 lines (  52 logic,  2 always)
+cv32e40x_controller_bypass.sv                        342 lines ( 164 logic,  3 always)
+cv32e40x_id_stage.sv                                 792 lines ( 487 logic, 11 always)
+cv32e40x_data_obi_interface.sv                        78 lines (  17 logic,  0 always)
+cv32e40x_mult.sv                                     233 lines ( 128 logic,  3 always)
+cv32e40x_mpu.sv                                      231 lines ( 142 logic,  3 always)
+cv32e40x_cs_registers.sv                            1944 lines (1368 logic, 10 always)
+cv32e40x_wpt.sv                                      178 lines (  86 logic,  2 always)
+cv32e40x_csr.sv                                       47 lines (  29 logic,  1 always)
+cv32e40x_controller.sv                               287 lines ( 172 logic,  0 always)
+cv32e40x_ex_stage.sv                                 500 lines ( 281 logic,  2 always)
+cv32e40x_alu.sv                                      405 lines ( 202 logic,  7 always)
+cv32e40x_if_xif.sv                                   250 lines ( 204 logic,  0 always)
+cv32e40x_prefetcher.sv                               156 lines (  82 logic,  2 always)
+cv32e40x_alu_b_cpop.sv                                45 lines (  12 logic,  0 always)
+cv32e40x_lsu_response_filter.sv                      173 lines (  87 logic,  3 always)
+cv32e40x_if_stage.sv                                 542 lines ( 333 logic,  3 always)
+cv32e40x_write_buffer.sv                             118 lines (  63 logic,  3 always)
+cv32e40x_i_decoder.sv                                427 lines ( 282 logic,  2 always)
+cv32e40x_prefetch_unit.sv                            150 lines (  92 logic,  0 always)
+cv32e40x_register_file_wrapper.sv                     73 lines (  30 logic,  0 always)
+cv32e40x_instr_obi_interface.sv                      155 lines (  61 logic,  3 always)
+cv32e40x_wb_stage.sv                                 239 lines (  96 logic,  1 always)
+cv32e40x_debug_triggers.sv                           526 lines ( 324 logic,  7 always)
+cv32e40x_clic_int_controller.sv                      177 lines (  74 logic,  2 always)
+cv32e40x_popcnt.sv                                    63 lines (  32 logic,  0 always)
+cv32e40x_controller_fsm.sv                          1506 lines ( 778 logic, 15 always)
+cv32e40x_ff_one.sv                                   101 lines (  53 logic,  0 always)
+cv32e40x_alignment_buffer.sv                         662 lines ( 377 logic, 12 always)
+cv32e40x_sequencer.sv                                450 lines ( 280 logic,  6 always)
+cv32e40x_sleep_unit.sv                               117 lines (  46 logic,  1 always)
+cv32e40x_div.sv                                      344 lines ( 201 logic,  5 always)
+cv32e40x_m_decoder.sv                                136 lines (  87 logic,  2 always)
+cv32e40x_compressed_decoder.sv                       400 lines ( 280 logic,  2 always)
+cv32e40x_align_check.sv                              184 lines ( 100 logic,  2 always)
+cv32e40x_if_c_obi.sv                                  52 lines (  34 logic,  0 always)
+cv32e40x_b_decoder.sv                                354 lines ( 289 logic,  2 always)
+cv32e40x_a_decoder.sv                                122 lines (  79 logic,  1 always)
+cv32e40x_decoder.sv                                  309 lines ( 213 logic,  1 always)
+
+--- Vector Coprocessor Files ---
+vector_coprocessor.sv                                261 lines ( 201 logic,  5 always)
+vector_reg_file_3port.sv                              58 lines (  36 logic,  1 always)
+vector_reg_file.sv                                    43 lines (  29 logic,  1 always)
+vlsu.sv                                              163 lines ( 115 logic,  3 always)
+vmac_unit.sv                                          46 lines (  38 logic,  1 always)
+
+=== Comparison with Known Processors ===
+For reference:
+- ARM Cortex-M0: ~15,000 gates, ~0.02 mm² (40nm)
+- ARM Cortex-M4: ~50,000 gates, ~0.15 mm² (40nm)
+- RISC-V RV32I simple: ~10,000-20,000 gates
+- RISC-V RV32IM with pipeline: ~25,000-40,000 gates
+

@@ -1,4 +1,4 @@
-// rtl/core/vector_coprocessor.sv - Fixed version with proper X-IF handshaking
+// rtl/core/vector_coprocessor.sv - Fixed with single VRF write per instruction
 `include "custom_opcodes.vh"
 import cv32e40x_xif_pkg::*;
 
@@ -29,13 +29,14 @@ module vector_coprocessor #(
     input  logic           xif_mem_result_valid_i,
     input  x_mem_result_t  xif_mem_result_i
 );
-    // FSM States
+    // FSM States - added WRITE_VRF state
     typedef enum logic [2:0] {
         IDLE,
         DECODE,
         START_LSU,
         WAIT_LSU,
         START_MAC,
+        WRITE_VRF,
         WRITEBACK
     } state_t;
     
@@ -58,6 +59,26 @@ module vector_coprocessor #(
     // MAC interface
     logic vmac_start, vmac_done;
     logic [VLEN-1:0] mac_result_q;
+    
+    // Register to capture data at the right time
+    logic [VLEN-1:0] result_data_q;
+    
+    always_ff @(posedge clk_i or negedge rst_ni) begin
+        if (!rst_ni) begin
+            result_data_q <= '0;
+        end else begin
+            // Capture load data when VLSU completes
+            if (vlsu_done && funct7_q == `FUNCT7_VLD) begin
+                result_data_q <= vlsu_load_data;
+                $display("Captured VLSU load data: first word = 0x%08x", vlsu_load_data[31:0]);
+            end
+            // Capture MAC result when MAC completes
+            else if (vmac_done && funct7_q == `FUNCT7_VMAC) begin
+                result_data_q <= mac_result_q;
+                $display("Captured MAC result: first word = 0x%08x", mac_result_q[31:0]);
+            end
+        end
+    end
     
     // Instruction decoding
     logic is_custom_instr;
@@ -204,28 +225,30 @@ module vector_coprocessor #(
             
             WAIT_LSU: begin
                 if (vlsu_done) begin
-                    next_state = WRITEBACK;
+                    if (funct7_q == `FUNCT7_VLD) begin
+                        next_state = WRITE_VRF;  // Go to write state for loads
+                    end else begin
+                        next_state = WRITEBACK;  // Skip write for stores
+                    end
                 end
             end
             
             START_MAC: begin
                 vmac_start = 1'b1;
-                // VMAC is single-cycle, go directly to WRITEBACK
+                next_state = WRITE_VRF;  // Go to write state after MAC
+            end
+            
+            WRITE_VRF: begin
+                // Single cycle to write to VRF
+                vrf_wdata = result_data_q;
+                vrf_we = 1'b1;
+                $display("WRITE_VRF: Writing to v%0d, first word = 0x%08x", 
+                         rd_q, result_data_q[31:0]);
                 next_state = WRITEBACK;
             end
             
             WRITEBACK: begin
-                // Prepare write data
-                if (funct7_q == `FUNCT7_VLD) begin
-                    vrf_wdata = vlsu_load_data;
-                end else if (funct7_q == `FUNCT7_VMAC) begin
-                    vrf_wdata = mac_result_q;
-                end
-                
-                // Write to VRF if not a store operation
-                vrf_we = (funct7_q != `FUNCT7_VST);
-                
-                // Wait for CPU to accept result
+                // Just wait for CPU handshake, no VRF write here
                 if (xif_result_ready_i) begin
                     next_state = IDLE;
                 end
