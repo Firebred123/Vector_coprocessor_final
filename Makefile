@@ -4,6 +4,7 @@
 RISCV_PREFIX = riscv64-unknown-elf-
 CC = $(RISCV_PREFIX)gcc
 OBJCOPY = $(RISCV_PREFIX)objcopy
+OBJDUMP = $(RISCV_PREFIX)objdump
 VERILATOR = verilator
 
 # Directories
@@ -14,21 +15,24 @@ VENDOR_DIR = vendor/cv32e40x
 INC_DIR = include
 OBJ_DIR = obj_dir
 
+# Test selection
+TEST ?= test_all_units_inline
+
 # Files
-ELF_FILE = matmul.elf
-MEM_FILE = memory.mem
+ELF_FILE = $(TEST).elf
+MEM_FILE = memory_words.hex
 VCD_FILE = simulation.vcd
 
 # RISC-V compilation flags
 RISCV_CFLAGS = -march=rv32im -mabi=ilp32 -nostartfiles -T$(TEST_DIR)/link.ld -I$(TEST_DIR)
 
 # Verilator flags
-VERILATOR_FLAGS = --cc --exe --build -j --O3 \
+VERILATOR_FLAGS = --cc --exe --build -j 4 \
 	--top-module soc_top \
 	--timescale 1ns/1ps \
 	--trace \
 	-I$(VENDOR_DIR)/rtl/include/ \
-	-I$(VENDOR_DIR)/bhv/include/ \
+	-I$(RTL_DIR)/include/ \
 	-I$(INC_DIR) \
 	-Wno-BLKANDNBLK \
 	-Wno-UNOPTFLAT \
@@ -36,11 +40,13 @@ VERILATOR_FLAGS = --cc --exe --build -j --O3 \
 	-Wno-LATCH \
 	-Wno-CASEINCOMPLETE \
 	-Wno-UNUSED \
+	-Wno-PINMISSING \
+	-Wno-IMPLICIT \
 	--Wno-fatal
 
-# CV32E40X RTL files (in dependency order)
-# IMPORTANT: cv32e40x_if_xif.sv must come early since it defines the interface types
-CV32E40X_RTL = $(VENDOR_DIR)/rtl/include/cv32e40x_pkg.sv \
+# CV32E40X RTL files (essential only, no bhv/sva)
+CV32E40X_RTL = \
+	$(VENDOR_DIR)/rtl/include/cv32e40x_pkg.sv \
 	$(RTL_DIR)/include/cv32e40x_xif_pkg.sv \
 	$(VENDOR_DIR)/rtl/cv32e40x_if_xif.sv \
 	$(VENDOR_DIR)/rtl/cv32e40x_pc_target.sv \
@@ -87,11 +93,12 @@ CV32E40X_RTL = $(VENDOR_DIR)/rtl/include/cv32e40x_pkg.sv \
 	$(VENDOR_DIR)/rtl/cv32e40x_decoder.sv \
 	$(VENDOR_DIR)/rtl/cv32e40x_core.sv
 
-# Behavioral models
+# Only essential behavioral model
 CV32E40X_BHV = $(VENDOR_DIR)/bhv/cv32e40x_sim_clock_gate.sv
 
-# Project RTL files (in dependency order)
-PROJECT_RTL = $(RTL_DIR)/core/vector_reg_file.sv \
+# Project RTL files
+PROJECT_RTL = \
+	$(RTL_DIR)/core/vector_reg_file.sv \
 	$(RTL_DIR)/core/vector_reg_file_3port.sv \
 	$(RTL_DIR)/execution/vmac_unit.sv \
 	$(RTL_DIR)/execution/vlsu.sv \
@@ -110,19 +117,22 @@ all: compile
 # Clean target
 clean:
 	@echo "--- Cleaning up ---"
-	rm -rf $(OBJ_DIR) *.vcd $(MEM_FILE) $(ELF_FILE)
+	rm -rf $(OBJ_DIR) *.vcd $(MEM_FILE) *.elf *.bin *.dump
 
 # Compile RISC-V assembly
-$(ELF_FILE): $(TEST_DIR)/matmul_8x8.s $(TEST_DIR)/link.ld $(TEST_DIR)/opcodes.inc
-	@echo "--- Compiling RISC-V Assembly ---"
-	$(CC) $(RISCV_CFLAGS) $(TEST_DIR)/matmul_8x8.s -o $(ELF_FILE)
+$(ELF_FILE): $(TEST_DIR)/$(TEST).s $(TEST_DIR)/link.ld $(TEST_DIR)/opcodes.inc
+	@echo "--- Compiling RISC-V Assembly: $(TEST).s ---"
+	$(CC) $(RISCV_CFLAGS) $(TEST_DIR)/$(TEST).s -o $(ELF_FILE)
+	@echo "--- Disassembly ---"
+	$(OBJDUMP) -d $(ELF_FILE) | head -50
 
 # Convert ELF to memory file
 $(MEM_FILE): $(ELF_FILE)
-	@echo "--- Converting ELF to Verilog Memory File ---"
-	$(OBJCOPY) -O binary $(ELF_FILE) matmul.bin
-	hexdump -v -e '1/4 "%08x\n"' matmul.bin > memory_words.hex
-	rm -f matmul.bin
+	@echo "--- Converting ELF to Memory File ---"
+	$(OBJCOPY) -O binary $(ELF_FILE) $(TEST).bin
+	hexdump -v -e '1/4 "%08x\n"' $(TEST).bin > $(MEM_FILE)
+	@echo "Created $(MEM_FILE) with $$(wc -l < $(MEM_FILE)) words"
+	rm -f $(TEST).bin
 
 # Compile hardware with Verilator
 compile: $(MEM_FILE)
@@ -149,10 +159,25 @@ run-full: compile
 	@echo "--- Running Full Debug Simulation ---"
 	cd $(OBJ_DIR) && ./Vsoc_top +DEBUG +WAVES
 
-# Check syntax only
-syntax-check:
-	@echo "--- Syntax Check Only ---"
-	$(VERILATOR) --lint-only -I$(VENDOR_DIR)/rtl/include/ -I$(VENDOR_DIR)/bhv/include/ -I$(INC_DIR) $(ALL_RTL)
+# View waveforms
+waves:
+	gtkwave $(VCD_FILE) &
+
+# Quick test (compile and run)
+test: compile run
+
+# Test with different programs
+test-vmac:
+	$(MAKE) clean
+	$(MAKE) TEST=vmac_test run-debug
+
+test-matmul:
+	$(MAKE) clean
+	$(MAKE) TEST=matmul_8x8 run-debug
+
+test-vector:
+	$(MAKE) clean
+	$(MAKE) TEST=vector_test run-debug
 
 # Help target
 help:
@@ -164,7 +189,14 @@ help:
 	@echo "  run-debug   - Run with debug output"
 	@echo "  run-waves   - Run with waveform dumping"
 	@echo "  run-full    - Run with debug and waves"
-	@echo "  syntax-check- Check syntax only"
+	@echo "  waves       - View waveforms with GTKWave"
+	@echo "  test        - Quick compile and run"
+	@echo "  test-vmac   - Test VMAC instruction"
+	@echo "  test-matmul - Test matrix multiply"
+	@echo "  test-vector - Test vector load/store"
 	@echo "  help        - Show this help"
+	@echo ""
+	@echo "To test a specific program:"
+	@echo "  make TEST=your_test_name run"
 
-.PHONY: all clean compile run run-debug run-waves run-full syntax-check help
+.PHONY: all clean compile run run-debug run-waves run-full waves test test-vmac test-matmul test-vector help

@@ -24,6 +24,7 @@ module soc_top #(
     cv32e40x_if_xif #( .X_ID_WIDTH(4) ) xif ();
 
     // --- CPU INSTANCE ---
+    
     cv32e40x_core #( .X_EXT(1), .X_ID_WIDTH(4) ) cpu_inst (
         .clk_i(clk_i), .rst_ni(rst_ni), .fetch_enable_i(1'b1),
         .scan_cg_en_i(1'b0), .boot_addr_i(32'h0), .dm_exception_addr_i(32'h0),

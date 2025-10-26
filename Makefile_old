@@ -1,0 +1,198 @@
+# Makefile for Vector Coprocessor Simulation
+
+# =========================================================================
+# === Configuration: Set the test name here or on the command line ======
+# =========================================================================
+# The default test to compile and run.
+# To run a different test, use: make run TEST=<test_name_without_.s>
+# Example: make run TEST=matmul_8x8
+TEST ?= vmac_multi_test
+
+# =========================================================================
+# === Toolchain and Directories ===========================================
+# =========================================================================
+# Tools
+RISCV_PREFIX	= riscv64-unknown-elf-
+CC		= $(RISCV_PREFIX)gcc
+OBJCOPY		= $(RISCV_PREFIX)objcopy
+VERILATOR	= verilator
+
+# Directories
+RTL_DIR		= rtl
+SIM_DIR		= sim
+TEST_DIR	= $(SIM_DIR)/tests
+VENDOR_DIR	= vendor/cv32e40x
+INC_DIR		= include
+OBJ_DIR		= obj_dir
+
+# =========================================================================
+# === Source Files and Outputs (Derived from TEST variable) ===============
+# =========================================================================
+# Test-specific source files
+TEST_SRC_S	= $(TEST_DIR)/$(TEST).s
+TEST_SRC_CPP	= $(TEST_DIR)/main.cpp # Assuming a common Verilator testbench driver
+
+# Output files are placed in OBJ_DIR
+ELF_FILE	= $(OBJ_DIR)/$(TEST).elf
+BIN_FILE	= $(OBJ_DIR)/$(TEST).bin
+MEM_FILE	= $(OBJ_DIR)/memory_words.hex
+
+# Verilator top-level module
+TOP_MODULE	= soc_top
+VERILATOR_EXE	= $(OBJ_DIR)/V$(TOP_MODULE)
+
+# CV32E40X RTL files (in dependency order)
+CV32E40X_RTL = $(VENDOR_DIR)/rtl/include/cv32e40x_pkg.sv \
+	$(RTL_DIR)/include/cv32e40x_xif_pkg.sv \
+	$(VENDOR_DIR)/rtl/cv32e40x_if_xif.sv \
+	$(VENDOR_DIR)/rtl/cv32e40x_pc_target.sv \
+	$(VENDOR_DIR)/rtl/cv32e40x_pma.sv \
+	$(VENDOR_DIR)/rtl/cv32e40x_register_file.sv \
+	$(VENDOR_DIR)/rtl/cv32e40x_load_store_unit.sv \
+	$(VENDOR_DIR)/rtl/cv32e40x_int_controller.sv \
+	$(VENDOR_DIR)/rtl/cv32e40x_controller_bypass.sv \
+	$(VENDOR_DIR)/rtl/cv32e40x_id_stage.sv \
+	$(VENDOR_DIR)/rtl/cv32e40x_data_obi_interface.sv \
+	$(VENDOR_DIR)/rtl/cv32e40x_mult.sv \
+	$(VENDOR_DIR)/rtl/cv32e40x_mpu.sv \
+	$(VENDOR_DIR)/rtl/cv32e40x_cs_registers.sv \
+	$(VENDOR_DIR)/rtl/cv32e40x_wpt.sv \
+	$(VENDOR_DIR)/rtl/cv32e40x_csr.sv \
+	$(VENDOR_DIR)/rtl/cv32e40x_controller.sv \
+	$(VENDOR_DIR)/rtl/cv32e40x_ex_stage.sv \
+	$(VENDOR_DIR)/rtl/cv32e40x_alu.sv \
+	$(VENDOR_DIR)/rtl/cv32e40x_prefetcher.sv \
+	$(VENDOR_DIR)/rtl/cv32e40x_alu_b_cpop.sv \
+	$(VENDOR_DIR)/rtl/cv32e40x_lsu_response_filter.sv \
+	$(VENDOR_DIR)/rtl/cv32e40x_if_stage.sv \
+	$(VENDOR_DIR)/rtl/cv32e40x_write_buffer.sv \
+	$(VENDOR_DIR)/rtl/cv32e40x_i_decoder.sv \
+	$(VENDOR_DIR)/rtl/cv32e40x_prefetch_unit.sv \
+	$(VENDOR_DIR)/rtl/cv32e40x_register_file_wrapper.sv \
+	$(VENDOR_DIR)/rtl/cv32e40x_instr_obi_interface.sv \
+	$(VENDOR_DIR)/rtl/cv32e40x_wb_stage.sv \
+	$(VENDOR_DIR)/rtl/cv32e40x_debug_triggers.sv \
+	$(VENDOR_DIR)/rtl/cv32e40x_clic_int_controller.sv \
+	$(VENDOR_DIR)/rtl/cv32e40x_popcnt.sv \
+	$(VENDOR_DIR)/rtl/cv32e40x_controller_fsm.sv \
+	$(VENDOR_DIR)/rtl/cv32e40x_ff_one.sv \
+	$(VENDOR_DIR)/rtl/cv32e40x_alignment_buffer.sv \
+	$(VENDOR_DIR)/rtl/cv32e40x_sequencer.sv \
+	$(VENDOR_DIR)/rtl/cv32e40x_sleep_unit.sv \
+	$(VENDOR_DIR)/rtl/cv32e40x_div.sv \
+	$(VENDOR_DIR)/rtl/cv32e40x_m_decoder.sv \
+	$(VENDOR_DIR)/rtl/cv32e40x_compressed_decoder.sv \
+	$(VENDOR_DIR)/rtl/cv32e40x_align_check.sv \
+	$(VENDOR_DIR)/rtl/cv32e40x_if_c_obi.sv \
+	$(VENDOR_DIR)/rtl/cv32e40x_b_decoder.sv \
+	$(VENDOR_DIR)/rtl/cv32e40x_a_decoder.sv \
+	$(VENDOR_DIR)/rtl/cv32e40x_decoder.sv \
+	$(VENDOR_DIR)/rtl/cv32e40x_core.sv
+
+# Behavioral models
+CV32E40X_BHV = $(VENDOR_DIR)/bhv/cv32e40x_sim_clock_gate.sv
+
+# Project RTL files
+PROJECT_RTL = $(RTL_DIR)/core/vector_reg_file.sv \
+	$(RTL_DIR)/core/vector_reg_file_3port.sv \
+	$(RTL_DIR)/execution/vmac_unit.sv \
+	$(RTL_DIR)/execution/vlsu.sv \
+	$(RTL_DIR)/core/vector_coprocessor.sv \
+	$(SIM_DIR)/soc_top.sv
+
+# All RTL files for Verilator
+ALL_RTL = $(CV32E40X_RTL) $(CV32E40X_BHV) $(PROJECT_RTL)
+
+# =========================================================================
+# === Compilation Flags ===================================================
+# =========================================================================
+# RISC-V compilation flags for a 32-bit system
+# -nostdlib removes dependency on a standard library
+# -Ttext=0x0 places code at memory address 0
+# -I$(TEST_DIR) tells the assembler where to find opcodes.inc
+RISCV_CFLAGS = -march=rv32im -mabi=ilp32 -nostdlib -Ttext=0x0 -I$(TEST_DIR)
+
+# Verilator flags
+VERILATOR_FLAGS = --cc --exe --build -j --O3 \
+	--top-module $(TOP_MODULE) \
+	--timescale 1ns/1ps \
+	--trace \
+	-I$(VENDOR_DIR)/rtl/include/ \
+	-I$(VENDOR_DIR)/bhv/include/ \
+	-I$(INC_DIR) \
+	-Wno-BLKANDNBLK \
+	-Wno-UNOPTFLAT \
+	-Wno-WIDTH \
+	-Wno-LATCH \
+	-Wno-CASEINCOMPLETE \
+	-Wno-UNUSED \
+	--Wno-fatal
+
+# =========================================================================
+# === Main Targets ========================================================
+# =========================================================================
+# Default target
+all: run
+
+# Run the simulation
+run: $(VERILATOR_EXE)
+	@echo "--- Running Simulation for TEST=$(TEST) ---"
+	cd $(OBJ_DIR) && ./V$(TOP_MODULE)
+
+# Run with extra Verilator arguments (e.g., +DEBUG, +WAVES)
+run-%: $(VERILATOR_EXE)
+	@echo "--- Running Simulation for TEST=$(TEST) with option: +$* ---"
+	cd $(OBJ_DIR) && ./V$(TOP_MODULE) +$*
+
+# Compile the hardware with Verilator. Depends on the memory file.
+$(VERILATOR_EXE): $(ALL_RTL) $(TEST_SRC_CPP) $(MEM_FILE)
+	@echo "--- Compiling Hardware with Verilator ---"
+	$(VERILATOR) $(VERILATOR_FLAGS) $(ALL_RTL) $(TEST_SRC_CPP)
+
+# Convert the ELF executable into a memory hex file for Verilator
+$(MEM_FILE): $(ELF_FILE)
+	@echo "--- Converting ELF to Verilog Memory File ---"
+	$(OBJCOPY) -O binary $(ELF_FILE) $(BIN_FILE)
+	hexdump -v -e '1/4 "%08x\n"' $(BIN_FILE) > $(MEM_FILE)
+	rm -f $(BIN_FILE)
+
+# Compile the selected RISC-V assembly test
+$(ELF_FILE): $(TEST_SRC_S)
+	@echo "--- Compiling RISC-V Assembly for TEST=$(TEST) ---"
+	mkdir -p $(OBJ_DIR)
+	$(CC) $(RISCV_CFLAGS) $< -o $@
+
+# =========================================================================
+# === Utility Targets =====================================================
+# =========================================================================
+# Clean up all generated files
+clean:
+	@echo "--- Cleaning up ---"
+	rm -rf $(OBJ_DIR)
+
+# Perform a syntax check on RTL files
+syntax-check:
+	@echo "--- Syntax Check Only ---"
+	$(VERILATOR) --lint-only -I$(VENDOR_DIR)/rtl/include/ -I$(VENDOR_DIR)/bhv/include/ -I$(INC_DIR) $(ALL_RTL)
+
+# Display help information
+help:
+	@echo "Usage: make [target] [TEST=<test_name>]"
+	@echo ""
+	@echo "Main Targets:"
+	@echo "  all          - Compiles and runs the default test (default)"
+	@echo "  run          - Runs the simulation for the selected test"
+	@echo "  run-debug    - Runs simulation with debug output enabled"
+	@echo "  run-waves    - Runs simulation and generates a VCD waveform file"
+	@echo ""
+	@echo "Utility Targets:"
+	@echo "  clean        - Removes all generated files"
+	@echo "  syntax-check - Checks RTL syntax without a full build"
+	@echo "  help         - Shows this help message"
+	@echo ""
+	@echo "Configuration:"
+	@echo "  TEST         - Specifies the assembly test to run (default: $(TEST))"
+	@echo "               Example: make run TEST=matmul_8x8"
+	@echo ""
+
+.PHONY: all run run-debug run-waves run-full clean syntax-check help
