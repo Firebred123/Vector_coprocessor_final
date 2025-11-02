@@ -1,4 +1,4 @@
-// rtl/execution/systolic_2x2.sv - 2×2 Systolic Array for Matrix Multiplication
+// rtl/execution/systolic_2x2.sv - Fixed 2×2 Systolic Array for Matrix Multiplication
 module systolic_2x2 #(
     parameter int DATA_WIDTH = 32,
     parameter int ACCUM_WIDTH = 64
@@ -9,11 +9,11 @@ module systolic_2x2 #(
     // Control signals
     input  logic                        start_i,        // Start new computation
     input  logic                        clear_i,        // Clear accumulators
-    input  logic                        accumulate_i,   // Add to existing values
+    input  logic                        accumulate_i,   // Add to existing values (for tiling)
     output logic                        busy_o,         // Array is computing
     output logic                        done_o,         // Computation complete
     
-    // Input matrix A (2 rows, fed from right)
+    // Input matrix A (2 rows, fed from left)
     input  logic [DATA_WIDTH-1:0]       a_row0_i,      // Row 0 of matrix A
     input  logic [DATA_WIDTH-1:0]       a_row1_i,      // Row 1 of matrix A
     input  logic                        a_valid_i,      // A inputs are valid
@@ -33,10 +33,6 @@ module systolic_2x2 #(
     // =========================================================================
     // Processing Element (PE) Structure
     // =========================================================================
-    
-    // Each PE has:
-    // - Local accumulator for C
-    // - Registers to propagate A (leftward) and B (downward)
     
     typedef struct packed {
         logic [DATA_WIDTH-1:0] a_reg;      // A value to propagate left
@@ -100,7 +96,7 @@ module systolic_2x2 #(
     // Input connections to PEs
     always_comb begin
         // PE[0][0] - top-left
-        a_wire[0][0] = a_row0_skewed;  // A from right
+        a_wire[0][0] = a_row0_skewed;  // A from left
         b_wire[0][0] = b_col0_skewed;  // B from top
         
         // PE[0][1] - top-right
@@ -108,7 +104,7 @@ module systolic_2x2 #(
         b_wire[0][1] = b_col1_skewed;   // B from top
         
         // PE[1][0] - bottom-left
-        a_wire[1][0] = a_row1_skewed;   // A from right
+        a_wire[1][0] = a_row1_skewed;   // A from left
         b_wire[1][0] = pe[0][0].b_reg;  // B from PE[0][0]
         
         // PE[1][1] - bottom-right
@@ -117,7 +113,7 @@ module systolic_2x2 #(
     end
     
     // =========================================================================
-    // Processing Elements Logic
+    // Processing Elements Logic - FIXED ACCUMULATION HERE
     // =========================================================================
     
     genvar row, col;
@@ -138,29 +134,43 @@ module systolic_2x2 #(
                             pe[row][col].a_reg <= a_wire[row][col];
                             pe[row][col].b_reg <= b_wire[row][col];
                             
-                            // MAC operation
+                            // MAC operation with proper accumulation control
                             if ((row == 0 && col == 0 && a_valid_i && b_valid_i) ||
                                 (row == 0 && col == 1 && pe[0][0].valid) ||
                                 (row == 1 && col == 0 && pe[0][0].valid) ||
                                 (row == 1 && col == 1 && pe[1][0].valid && pe[0][1].valid)) begin
                                 
-                                pe[row][col].c_acc <= pe[row][col].c_acc + 
-                                    (a_wire[row][col] * b_wire[row][col]);
+                                // ========================================
+                                // THIS IS WHERE THE FIX IS APPLIED
+                                // ========================================
+                                // Check if we should accumulate or restart
+                                if (!accumulate_i && cycle_counter == 0) begin
+                                    // First cycle without accumulation - start fresh
+                                    pe[row][col].c_acc <= a_wire[row][col] * b_wire[row][col];
+                                end else begin
+                                    // Accumulate the result
+                                    pe[row][col].c_acc <= pe[row][col].c_acc + 
+                                                          (a_wire[row][col] * b_wire[row][col]);
+                                end
+                                
                                 pe[row][col].valid <= 1'b1;
                                 
                                 // Debug output
                                 `ifdef DEBUG_SYSTOLIC
-                                $display("PE[%0d][%0d]: %0d * %0d + %0d = %0d", 
-                                    row, col, 
+                                $display("PE[%0d][%0d] @ cycle %0d: %0d * %0d, acc=%0d, accumulate_i=%b", 
+                                    row, col, cycle_counter,
                                     a_wire[row][col], b_wire[row][col],
-                                    pe[row][col].c_acc,
-                                    pe[row][col].c_acc + (a_wire[row][col] * b_wire[row][col]));
+                                    pe[row][col].c_acc, accumulate_i);
                                 `endif
                             end
                         end
                         
                         if (state == IDLE) begin
                             pe[row][col].valid <= 1'b0;
+                            // Clear accumulators when idle if not accumulating
+                            if (!accumulate_i) begin
+                                pe[row][col].c_acc <= '0;
+                            end
                         end
                     end
                 end
@@ -242,6 +252,22 @@ module systolic_2x2 #(
     assign done_o = (state == DONE);
     
     // =========================================================================
+    // Debug Output
+    // =========================================================================
+    
+    `ifdef DEBUG_SYSTOLIC
+    always @(posedge clk_i) begin
+        if (state == DONE) begin
+            $display("Systolic Array Results (accumulate=%b):", accumulate_i);
+            $display("  C[0][0] = %0d", c00_o);
+            $display("  C[0][1] = %0d", c01_o);
+            $display("  C[1][0] = %0d", c10_o);
+            $display("  C[1][1] = %0d", c11_o);
+        end
+    end
+    `endif
+    
+    // =========================================================================
     // Assertions for Verification
     // =========================================================================
     
@@ -251,6 +277,11 @@ module systolic_2x2 #(
     
     // Ensure done is only asserted in DONE state
     assert property (@(posedge clk_i) done_o |-> (state == DONE));
+    
+    // Ensure accumulation works correctly
+    assert property (@(posedge clk_i) 
+        (clear_i) |=> (pe[0][0].c_acc == 0 && pe[0][1].c_acc == 0 && 
+                       pe[1][0].c_acc == 0 && pe[1][1].c_acc == 0));
     `endif
 
 endmodule

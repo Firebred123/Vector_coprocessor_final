@@ -30,7 +30,7 @@ RISCV_CFLAGS = -march=rv32im -mabi=ilp32 -nostartfiles -T$(TEST_DIR)/link.ld -I$
 
 # Verilator flags
 VERILATOR_FLAGS = --cc --exe --build -j 4 \
-	--top-module soc_top_debug \
+	--top-module soc_top_with_cache \
 	--timescale 1ns/1ps \
 	--trace \
 	-I$(VENDOR_DIR)/rtl/include/ \
@@ -116,13 +116,14 @@ CACHE_ADAPTERS = \
 PROJECT_RTL = \
 	$(RTL_DIR)/core/vector_reg_file.sv \
 	$(RTL_DIR)/core/vector_reg_file_3port.sv \
-	$(RTL_DIR)/execution/vmac_unit.sv \
+	$(RTL_DIR)/execution/vector_exec_unit.sv \
+	$(RTL_DIR)/execution/systolic_2x2.sv \
 	$(RTL_DIR)/execution/vlsu.sv \
 	$(RTL_DIR)/core/vector_coprocessor.sv
 
 # SoC top module (choose one)
 # SOC_TOP = $(SIM_DIR)/soc_top.sv              # Original without caches
-SOC_TOP = $(SIM_DIR)/soc_top_debug.sv         # New with caches
+SOC_TOP = $(SIM_DIR)/soc_top_with_cache.sv          # New with caches
 
 # Testbench (choose based on target)
 TESTBENCH_CACHED = $(TEST_DIR)/main_cached.cpp
@@ -155,20 +156,20 @@ setup-cache:
 		echo "// OBI to Cache adapter stub" > $(ADAPTER_DIR)/obi_cache_adapter.sv; \
 		echo "// TODO: Implement adapter logic" >> $(ADAPTER_DIR)/obi_cache_adapter.sv; \
 	fi
-	@if [ ! -f $(SIM_DIR)/soc_top_debug.sv ]; then \
+	@if [ ! -f $(SIM_DIR)/soc_top_cached.sv ]; then \
 		echo "Creating SoC top with caches..."; \
-		echo "// SoC top with caches stub" > $(SIM_DIR)/soc_top_debug.sv; \
-		echo "// TODO: Implement SoC with cache integration" >> $(SIM_DIR)/soc_top_debug.sv; \
+		echo "// SoC top with caches stub" > $(SIM_DIR)/soc_top_cached.sv; \
+		echo "// TODO: Implement SoC with cache integration" >> $(SIM_DIR)/soc_top_cached.sv; \
 	fi
 
 # Check cache files
 check-cache:
 	@echo "--- Checking cache files ---"
 	@echo "Cache directory contents:"
-	@ls -la $(CACHE_DIR) 2>/dev/null || echo "Cache directory not found"
+	@ls -la $(CACHE_DIR) 2>/dev_null || echo "Cache directory not found"
 	@echo ""
 	@echo "Adapter directory contents:"
-	@ls -la $(ADAPTER_DIR) 2>/dev/null || echo "Adapter directory not found"
+	@ls -la $(ADAPTER_DIR) 2>/dev_null || echo "Adapter directory not found"
 
 # Clean target
 clean:
@@ -211,7 +212,7 @@ compile-nocache: $(MEM_FILE)
 run: compile
 	@echo "--- Running Simulation with Caches ---"
 	@cp $(MEM_FILE) $(OBJ_DIR)/
-	cd $(OBJ_DIR) && ./Vsoc_top_debug
+	cd $(OBJ_DIR) && ./Vsoc_top_with_cache
 
 # Run without caches
 run-nocache: compile-nocache
@@ -223,19 +224,19 @@ run-nocache: compile-nocache
 run-debug: compile
 	@echo "--- Running Simulation with Debug ---"
 	@cp $(MEM_FILE) $(OBJ_DIR)/
-	cd $(OBJ_DIR) && ./Vsoc_top_debug +DEBUG
+	cd $(OBJ_DIR) && ./Vsoc_top_cached +DEBUG
 
 # Run with waveforms
 run-waves: compile
 	@echo "--- Running Simulation with Waveforms ---"
 	@cp $(MEM_FILE) $(OBJ_DIR)/
-	cd $(OBJ_DIR) && ./Vsoc_top_debug +WAVES
+	cd $(OBJ_DIR) && ./Vsoc_top_cached +WAVES
 
 # Run with both debug and waves
 run-full: compile
 	@echo "--- Running Full Debug Simulation ---"
 	@cp $(MEM_FILE) $(OBJ_DIR)/
-	cd $(OBJ_DIR) && ./Vsoc_top_debug +DEBUG +WAVES
+	cd $(OBJ_DIR) && ./Vsoc_top_cached +DEBUG +WAVES
 
 # View waveforms
 waves:

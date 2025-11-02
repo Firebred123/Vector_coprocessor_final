@@ -1,22 +1,38 @@
-/* sim/tests/link.ld */
-OUTPUT_ARCH( "riscv" )
-ENTRY( _start )
+
+/* sim/tests/link.ld - Linker script for RISC-V test programs */
 
 MEMORY
 {
-  ram (rxai!w) : ORIGIN = 0x00000000, LENGTH = 32K
+    RAM (rwx) : ORIGIN = 0x00000000, LENGTH = 32K
 }
 
 SECTIONS
 {
-  .text :
-  {
-    *(.text.init)
-    *(.text)
-  } > ram
-
-  .data :
-  {
-    *(.data)
-  } > ram
+    . = 0x00000000;
+    
+    .text : {
+        *(.text)
+        *(.text.*)
+    } > RAM
+    
+    .data : {
+        *(.data)
+        *(.data.*)
+    } > RAM
+    
+    .bss : {
+        *(.bss)
+        *(.bss.*)
+    } > RAM
+    
+    .rodata : {
+        *(.rodata)
+        *(.rodata.*)
+    } > RAM
+    
+    /DISCARD/ : {
+        *(.comment)
+        *(.note.*)
+    }
 }
+

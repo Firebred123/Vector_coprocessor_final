@@ -103,8 +103,13 @@
 .equ V30,  30
 .equ V31,  31
 
-# Custom opcode definitions (matching custom_opcodes.vh)
-.equ OPCODE_CUSTOM0, 0x0B    # 7'b0001011
-.equ FUNCT7_VLD,     0x01    # 7'b0000001  
-.equ FUNCT7_VST,     0x02    # 7'b0000010
-.equ FUNCT7_VMAC,    0x03    # 7'b0000011
+# Custom opcodes for vector instructions
+.equ OPCODE_CUSTOM0, 0x0B
+.equ FUNCT7_VLD,     0x01
+.equ FUNCT7_VST,     0x02
+.equ FUNCT7_VMAC,    0x03
+.equ FUNCT7_VADD,    0x04
+.equ FUNCT7_VSUB,    0x05
+.equ FUNCT7_VMUL,    0x06
+.equ FUNCT7_VMMUL,   0x08
+ 

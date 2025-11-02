@@ -1,4 +1,4 @@
-// rtl/execution/vector_exec_unit.sv - Vector execution unit with 2x2 systolic array
+// rtl/execution/vector_exec_unit.sv - Fixed with proper matrix multiply
 `include "custom_opcodes.vh"
 
 module vector_exec_unit #(
@@ -44,15 +44,16 @@ module vector_exec_unit #(
     
     // Pipeline control
     logic            busy_q;
-    logic [3:0]      cycle_count;
+    logic [5:0]      cycle_count;  // Increased for matrix operations
     logic [6:0]      funct7_q;
     logic [2:0]      funct3_q;
     
     // Matrix multiply signals
     logic            matmul_active;
     logic [1:0]      matrix_size;  // 00=2x2, 01=4x4, 10=8x8
-    logic [3:0]      tile_row, tile_col;  // Current tile being processed
-    logic [3:0]      max_tiles;  // Number of tiles per dimension
+    logic [2:0]      tile_row, tile_col, tile_k;  // Added tile_k for k-dimension
+    logic [2:0]      max_tiles;  // Number of tiles per dimension
+    logic [2:0]      actual_size; // Actual matrix size (2, 4, or 8)
     
     // 2x2 Systolic array signals
     logic            sys_start;
@@ -71,7 +72,7 @@ module vector_exec_unit #(
     logic [63:0]     matrix_c [7:0][7:0];  // Result accumulator (wider for no overflow)
     
     // =========================================================================
-    // Basic Vector Execution Units
+    // Basic Vector Execution Units (Single-Cycle)
     // =========================================================================
     
     // VMAC unit (multiply-accumulate)
@@ -139,7 +140,7 @@ module vector_exec_unit #(
         .rst_ni(rst_ni),
         .start_i(sys_start),
         .clear_i(sys_clear),
-        .accumulate_i(sys_accumulate),
+        .accumulate_i(sys_accumulate),  // Properly connected
         .busy_o(sys_busy),
         .done_o(sys_done),
         .a_row0_i(sys_a_row0),
@@ -155,16 +156,18 @@ module vector_exec_unit #(
     );
     
     // =========================================================================
-    // Matrix Multiply Control State Machine
+    // Matrix Multiply Control State Machine - FIXED
     // =========================================================================
     
-    typedef enum logic [2:0] {
+    typedef enum logic [3:0] {
         MM_IDLE,
         MM_LOAD_MATRICES,
         MM_START_TILE,
-        MM_FEED_DATA,
+        MM_CLEAR_ACC,
+        MM_FEED_K,        // Feed k-th elements
         MM_WAIT_COMPUTE,
         MM_STORE_RESULT,
+        MM_NEXT_K,        // Move to next k
         MM_NEXT_TILE,
         MM_COMPLETE
     } matmul_state_t;
@@ -176,29 +179,34 @@ module vector_exec_unit #(
         case (funct3_q)
             3'b000: begin
                 matrix_size = 2'b00;  // 2x2
-                max_tiles = 4'd1;
+                max_tiles = 3'd1;
+                actual_size = 3'd2;
             end
             3'b001: begin
                 matrix_size = 2'b01;  // 4x4
-                max_tiles = 4'd2;
+                max_tiles = 3'd2;
+                actual_size = 3'd4;
             end
             3'b010: begin
                 matrix_size = 2'b10;  // 8x8
-                max_tiles = 4'd4;
+                max_tiles = 3'd4;
+                actual_size = 3'd8;
             end
             default: begin
                 matrix_size = 2'b00;
-                max_tiles = 4'd1;
+                max_tiles = 3'd1;
+                actual_size = 3'd2;
             end
         endcase
     end
     
-    // Matrix multiply state machine
+    // Matrix multiply state machine - FIXED
     always_ff @(posedge clk_i or negedge rst_ni) begin
         if (!rst_ni) begin
             mm_state <= MM_IDLE;
             tile_row <= '0;
             tile_col <= '0;
+            tile_k <= '0;
             
             // Clear matrices
             for (int i = 0; i < 8; i++) begin
@@ -216,7 +224,8 @@ module vector_exec_unit #(
                     // Load matrices from vector inputs
                     // Assuming vec_a and vec_b contain flattened matrices
                     for (int i = 0; i < 8; i++) begin
-                        if (i < (max_tiles * 2)) begin
+                        if (i < actual_size) begin
+                            // Load from flattened vectors
                             matrix_a[i/2][i%2] <= vec_a_i[i*32 +: 32];
                             matrix_b[i/2][i%2] <= vec_b_i[i*32 +: 32];
                         end
@@ -227,15 +236,27 @@ module vector_exec_unit #(
                             matrix_c[i][j] <= '0;
                         end
                     end
+                    tile_row <= '0;
+                    tile_col <= '0;
+                    tile_k <= '0;
                 end
                 
                 MM_WAIT_COMPUTE: begin
                     if (sys_done) begin
-                        // Store 2x2 tile result
+                        // Store 2x2 tile result with accumulation
                         matrix_c[tile_row*2][tile_col*2]     <= matrix_c[tile_row*2][tile_col*2] + sys_c00;
                         matrix_c[tile_row*2][tile_col*2+1]   <= matrix_c[tile_row*2][tile_col*2+1] + sys_c01;
                         matrix_c[tile_row*2+1][tile_col*2]   <= matrix_c[tile_row*2+1][tile_col*2] + sys_c10;
                         matrix_c[tile_row*2+1][tile_col*2+1] <= matrix_c[tile_row*2+1][tile_col*2+1] + sys_c11;
+                    end
+                end
+                
+                MM_NEXT_K: begin
+                    // Move to next k iteration
+                    if (tile_k < actual_size - 1) begin
+                        tile_k <= tile_k + 1;
+                    end else begin
+                        tile_k <= '0;
                     end
                 end
                 
@@ -249,12 +270,13 @@ module vector_exec_unit #(
                             tile_row <= tile_row + 1;
                         end
                     end
+                    tile_k <= '0;  // Reset k for next tile
                 end
             endcase
         end
     end
     
-    // Matrix multiply next state logic
+    // Matrix multiply next state logic - FIXED
     always_comb begin
         mm_next_state = mm_state;
         sys_start = 1'b0;
@@ -262,6 +284,10 @@ module vector_exec_unit #(
         sys_accumulate = 1'b0;
         sys_a_valid = 1'b0;
         sys_b_valid = 1'b0;
+        sys_a_row0 = '0;
+        sys_a_row1 = '0;
+        sys_b_col0 = '0;
+        sys_b_col1 = '0;
         
         case (mm_state)
             MM_IDLE: begin
@@ -275,24 +301,38 @@ module vector_exec_unit #(
             end
             
             MM_START_TILE: begin
-                sys_clear = 1'b1;  // Clear accumulators for new tile
-                mm_next_state = MM_FEED_DATA;
+                mm_next_state = MM_CLEAR_ACC;
             end
             
-            MM_FEED_DATA: begin
-                // Feed 2x2 tiles to systolic array
-                sys_a_row0 = matrix_a[tile_row*2][0];
-                sys_a_row1 = matrix_a[tile_row*2+1][0];
-                sys_b_col0 = matrix_b[0][tile_col*2];
-                sys_b_col1 = matrix_b[0][tile_col*2+1];
+            MM_CLEAR_ACC: begin
+                sys_clear = 1'b1;  // Clear systolic array accumulators
+                mm_next_state = MM_FEED_K;
+            end
+            
+            MM_FEED_K: begin
+                // Feed k-th elements for matrix multiply
+                // For C[i,j] = sum(A[i,k] * B[k,j]) over k
+                sys_a_row0 = matrix_a[tile_row*2][tile_k];
+                sys_a_row1 = matrix_a[tile_row*2+1][tile_k];
+                sys_b_col0 = matrix_b[tile_k][tile_col*2];
+                sys_b_col1 = matrix_b[tile_k][tile_col*2+1];
                 sys_a_valid = 1'b1;
                 sys_b_valid = 1'b1;
                 sys_start = 1'b1;
+                sys_accumulate = (tile_k > 0);  // Accumulate after first k
                 mm_next_state = MM_WAIT_COMPUTE;
             end
             
             MM_WAIT_COMPUTE: begin
                 if (sys_done) begin
+                    mm_next_state = MM_NEXT_K;
+                end
+            end
+            
+            MM_NEXT_K: begin
+                if (tile_k < actual_size - 1) begin
+                    mm_next_state = MM_FEED_K;  // Continue with next k
+                end else begin
                     mm_next_state = MM_STORE_RESULT;
                 end
             end
@@ -337,13 +377,6 @@ module vector_exec_unit #(
                         busy_q <= 1'b0;
                     end
                     
-                    `FUNCT7_VMMUL: begin
-                        // Multi-cycle matrix multiply
-                        busy_q <= 1'b1;
-                        matmul_active <= 1'b1;
-                        cycle_count <= '0;
-                    end
-                    
                     `FUNCT7_VADD: begin
                         // Single-cycle VADD
                         busy_q <= 1'b0;
@@ -357,6 +390,13 @@ module vector_exec_unit #(
                     `FUNCT7_VMUL: begin
                         // Single-cycle VMUL
                         busy_q <= 1'b0;
+                    end
+                    
+                    `FUNCT7_VMMUL: begin
+                        // Multi-cycle matrix multiply
+                        busy_q <= 1'b1;
+                        matmul_active <= 1'b1;
+                        cycle_count <= '0;
                     end
                     
                     default: begin
@@ -386,9 +426,10 @@ module vector_exec_unit #(
         
         if (funct7_q == `FUNCT7_VMMUL && mm_state == MM_COMPLETE) begin
             // Pack matrix result into vector
-            for (int i = 0; i < 8; i++) begin
-                if (i < (max_tiles * 2)) begin
-                    result_o[i*32 +: 32] = matrix_c[i/2][i%2][31:0];
+            integer idx;
+            for (idx = 0; idx < 8; idx++) begin
+                if (idx < (actual_size * 2)) begin
+                    result_o[idx*32 +: 32] = matrix_c[idx/2][idx%2][31:0];
                 end
             end
         end else begin
@@ -415,6 +456,7 @@ module vector_exec_unit #(
     // Debug Output
     // =========================================================================
     
+    `ifdef DEBUG_EXEC
     always @(posedge clk_i) begin
         if (start_i && !busy_q) begin
             $display("EXEC: Starting %s operation at cycle %0d", 
@@ -424,23 +466,21 @@ module vector_exec_unit #(
                      (funct7_i == `FUNCT7_VSUB) ? "VSUB" :
                      (funct7_i == `FUNCT7_VMUL) ? "VMUL" : "UNKNOWN",
                      cycle_count);
-            
-            if (funct7_i == `FUNCT7_VMAC) begin
-                $display("  vec_a[0] = 0x%08x (%0d)", vec_a_i[31:0], $signed(vec_a_i[31:0]));
-                $display("  vec_b[0] = 0x%08x (%0d)", vec_b_i[31:0], $signed(vec_b_i[31:0]));
-                $display("  vec_c[0] = 0x%08x (%0d)", vec_c_i[31:0], $signed(vec_c_i[31:0]));
-                $display("  result[0] = 0x%08x (%0d)", 
-                         vmac_result[31:0], $signed(vmac_result[31:0]));
-            end else if (funct7_i == `FUNCT7_VMMUL) begin
-                $display("  Matrix size: %s", 
-                         (funct3_i == 3'b000) ? "2x2" :
-                         (funct3_i == 3'b001) ? "4x4" :
-                         (funct3_i == 3'b010) ? "8x8" : "unknown");
-            end
+        end
+        
+        if (mm_state == MM_FEED_K) begin
+            $display("EXEC: Feeding k=%0d for tile[%0d,%0d]", tile_k, tile_row, tile_col);
+            $display("  A[%0d][%0d]=%0d, A[%0d][%0d]=%0d", 
+                     tile_row*2, tile_k, sys_a_row0,
+                     tile_row*2+1, tile_k, sys_a_row1);
+            $display("  B[%0d][%0d]=%0d, B[%0d][%0d]=%0d",
+                     tile_k, tile_col*2, sys_b_col0,
+                     tile_k, tile_col*2+1, sys_b_col1);
+            $display("  Accumulate: %b", sys_accumulate);
         end
         
         if (mm_state == MM_WAIT_COMPUTE && sys_done) begin
-            $display("EXEC: Tile [%0d,%0d] computed:", tile_row, tile_col);
+            $display("EXEC: Tile [%0d,%0d], k=%0d computed:", tile_row, tile_col, tile_k);
             $display("  [%0d, %0d]", sys_c00[31:0], sys_c01[31:0]);
             $display("  [%0d, %0d]", sys_c10[31:0], sys_c11[31:0]);
         end
@@ -452,5 +492,6 @@ module vector_exec_unit #(
             $display("  [%0d, %0d]", matrix_c[1][0][31:0], matrix_c[1][1][31:0]);
         end
     end
+    `endif
 
 endmodule

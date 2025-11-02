@@ -1,7 +1,7 @@
 // sim/tests/main_cached.cpp - Testbench for cached system
 #include <verilated.h>
 #include <verilated_vcd_c.h>
-#include "Vsoc_top_debug.h"  // Changed from Vsoc_top
+#include "Vsoc_top_with_cache.h"  // <--- FIXED: Was Vsoc_top_debug.h
 #include <iostream>
 #include <fstream>
 #include <iomanip>
@@ -22,7 +22,7 @@ int main(int argc, char** argv) {
     Verilated::commandArgs(argc, argv);
     
     // Create instance of our module
-    Vsoc_top_debug* top = new Vsoc_top_debug("top");  // Changed from Vsoc_top
+    Vsoc_top_with_cache* top = new Vsoc_top_with_cache("top");  // <--- FIXED: Was Vsoc_top_debug
     
     // Tracing
     Verilated::traceEverOn(true);

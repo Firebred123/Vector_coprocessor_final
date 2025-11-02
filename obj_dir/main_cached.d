@@ -5,6 +5,6 @@ main_cached.o: ../sim/tests/main_cached.cpp \
  /opt/verilator/share/verilator/include/verilated.h \
  /opt/verilator/share/verilator/include/verilated_trace.h \
  /opt/verilator/share/verilator/include/verilated_trace_defs.h \
- Vsoc_top_debug.h \
+ Vsoc_top_with_cache.h \
  /opt/verilator/share/verilator/include/verilated_heavy.h \
  /opt/verilator/share/verilator/include/vltstd/svdpi.h

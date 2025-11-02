@@ -161,7 +161,9 @@ module soc_top_cached (
     logic dcache_outport_rd, dcache_inport_accept, dcache_inport_ack;
     logic [3:0] dcache_outport_wr;
     logic [7:0] dcache_outport_len;
-    
+
+    //flush signal
+        
     // Direct connection for D-cache
     assign dcache_mem_addr = data_addr;
     assign dcache_mem_data_wr = data_wdata;
@@ -390,7 +392,7 @@ module soc_top_cached (
     logic [31:0] cycle_count;
     logic [31:0] prev_pc;
     logic pc_stuck_counter;
-    
+
     always_ff @(posedge clk_i or negedge rst_ni) begin
         if (!rst_ni) begin
             cycle_count <= '0;
