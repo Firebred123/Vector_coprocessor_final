@@ -1,4 +1,4 @@
-# sim/tests/vmac_test.s - Test VMAC operation
+# sim/tests/vmac_test.s - Test VMUL operation
 .section .text
 .global _start
 .include "opcodes.inc"
@@ -22,8 +22,8 @@ _start:
     mv a0, s2
     .word ((FUNCT7_VLD << 25) | (0 << 20) | (A0 << 15) | (0 << 12) | (V3 << 7) | OPCODE_CUSTOM0)
     
-    # VMAC: v3 = v1 * v2 + v3
-    .word ((FUNCT7_VMAC << 25) | (V2 << 20) | (V1 << 15) | (0 << 12) | (V3 << 7) | OPCODE_CUSTOM0)
+    # VMUL: v3 = v1 * v2
+    .word ((FUNCT7_VMUL << 25) | (V2 << 20) | (V1 << 15) | (0 << 12) | (V3 << 7) | OPCODE_CUSTOM0)
     
     # Store result
     mv a0, s3

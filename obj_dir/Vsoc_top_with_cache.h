@@ -37,7 +37,7 @@ class Vsoc_top_with_cache VL_NOT_FINAL {
     // Public to allow access to /* verilator public */ items.
     // Otherwise the application code can consider these internals.
     Vsoc_top_with_cache_cv32e40x_if_xif* const __PVT__soc_top_with_cache__DOT__xif;
-    Vsoc_top_with_cache_cv32e40x_if_c_obi* const __PVT__soc_top_with_cache__DOT__cpu_core__DOT__m_c_obi_instr_if;
+    Vsoc_top_with_cache_cv32e40x_if_c_obi* const __PVT__soc_top_with_cache__DOT__cpu__DOT__m_c_obi_instr_if;
 
     // Root instance pointer to allow access to model internals,
     // including inlined /* verilator public_flat_* */ items.
@@ -58,12 +58,12 @@ class Vsoc_top_with_cache VL_NOT_FINAL {
   public:
     // API METHODS
     /// Evaluate the model.  Application must call when inputs change.
-    void eval() { eval_step(); eval_end_step(); }
+    void eval() { eval_step(); }
     /// Evaluate when calling multiple units/models per time step.
     void eval_step();
     /// Evaluate at end of a timestep for tracing, when using eval_step().
     /// Application must call after all eval() and before time changes.
-    void eval_end_step();
+    void eval_end_step() {}
     /// Simulation complete, run final blocks.  Application must call on completion.
     void final();
     /// Trace signals in the model; called by application code

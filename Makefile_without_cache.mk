@@ -46,7 +46,7 @@ VERILATOR_FLAGS = --cc --exe --build -j 4 \
 	-Wno-IMPLICIT \
 	-Wno-MODDUP \
 	--Wno-fatal
-	
+
 # CV32E40X RTL files (essential only, no bhv/sva)
 CV32E40X_RTL = \
 	$(VENDOR_DIR)/rtl/include/cv32e40x_pkg.sv \
@@ -122,12 +122,11 @@ PROJECT_RTL = \
 	$(RTL_DIR)/core/vector_coprocessor.sv
 
 # SoC top module (choose one)
-# SOC_TOP = $(SIM_DIR)/soc_top.sv              # Original without caches
-SOC_TOP = $(SIM_DIR)/soc_top_with_cache.sv          # New with caches
+SOC_TOP = $(SIM_DIR)/soc_top_simple.sv          # New with caches
 
 # Testbench (choose based on target)
-TESTBENCH_CACHED = $(TEST_DIR)/main_cached.cpp
 TESTBENCH_NOCACHE = $(TEST_DIR)/main.cpp
+TESTBENCH = $(TEST_DIR)/main.cpp
 
 # All RTL files
 ALL_RTL = $(CV32E40X_RTL) $(CV32E40X_BHV) $(CACHE_RTL) $(CACHE_ADAPTERS) $(PROJECT_RTL) $(SOC_TOP)
@@ -212,7 +211,7 @@ compile-nocache: $(MEM_FILE)
 run: compile
 	@echo "--- Running Simulation with Caches ---"
 	@cp $(MEM_FILE) $(OBJ_DIR)/
-	cd $(OBJ_DIR) && ./Vsoc_top_with_cache
+	cd $(OBJ_DIR) && ./Vsoc_top_simple
 
 # Run without caches
 run-nocache: compile-nocache

@@ -48,17 +48,7 @@ module vector_coprocessor #(
     localparam int NUM_VREGS = 16;
     localparam int VRF_ADDR_WIDTH = $clog2(NUM_VREGS);
 
-    // Opcodes (hardcoded to fix missing 'custom_opcodes.vh')
-    localparam [6:0] CUSTOM0_OPCODE   = 7'b0001011;
     
-    // Funct7 codes (inferred from files and error logs)
-    localparam [6:0] FUNCT7_VLD       = 7'b0000001;
-    localparam [6:0] FUNCT7_VST       = 7'b0000010;
-    localparam [6:0] FUNCT7_VADD      = 7'b0000011; // Assumed from vector_exec_unit.sv
-    localparam [6:0] FUNCT7_VSUB      = 7'b0000100; // Assumed from vector_exec_unit.sv
-    localparam [6:0] FUNCT7_VMUL      = 7'b0000101; // Assumed from vector_exec_unit.sv
-    localparam [6:0] FUNCT7_VMATMUL   = 7'b0001000; // From vector_exec_unit.sv
-
     typedef struct packed {
         logic [6:0] opcode;
         logic [4:0] rd;
@@ -126,18 +116,23 @@ module vector_coprocessor #(
     logic is_store_op;
     logic is_exec_op;
 
+    logic is_load_q;
+    logic is_store_q;
+    logic is_exec_q;
+
     // =========================================================================
     // Decoding Logic
     // =========================================================================
     assign decoded_instr = instruction_t'(xif_issue_req_i.instr);
 
-    assign is_load_op  = (decoded_instr.opcode == CUSTOM0_OPCODE) && (decoded_instr.funct7 == FUNCT7_VLD);
-    assign is_store_op = (decoded_instr.opcode == CUSTOM0_OPCODE) && (decoded_instr.funct7 == FUNCT7_VST);
-    assign is_exec_op  = (decoded_instr.opcode == CUSTOM0_OPCODE) && (
-                           (decoded_instr.funct7 == FUNCT7_VADD) ||
-                           (decoded_instr.funct7 == FUNCT7_VSUB) ||
-                           (decoded_instr.funct7 == FUNCT7_VMUL) ||
-                           (decoded_instr.funct7 == FUNCT7_VMATMUL)
+    assign is_load_op  = (decoded_instr.opcode == `CUSTOM0_OPCODE) && (decoded_instr.funct7 == `FUNCT7_VLD);
+    assign is_store_op = (decoded_instr.opcode == `CUSTOM0_OPCODE) && (decoded_instr.funct7 == `FUNCT7_VST);
+    assign is_exec_op  = (decoded_instr.opcode == `CUSTOM0_OPCODE) && (
+                           (decoded_instr.funct7 == `FUNCT7_VADD) ||
+                           (decoded_instr.funct7 == `FUNCT7_VSUB) ||
+                           (decoded_instr.funct7 == `FUNCT7_VMUL) ||
+			   (decoded_instr.funct7 == `FUNCT7_VMAC) ||
+                           (decoded_instr.funct7 == `FUNCT7_VMMUL) 
                          );
 
     // =========================================================================
@@ -227,11 +222,11 @@ module vector_coprocessor #(
     };
 
     // VRF read addresses
-    assign vrf_raddr_a = is_store_op ? decoded_instr.rd : decoded_instr.rs1;
-    assign vrf_raddr_b = decoded_instr.rs2;
+    assign vrf_raddr_a = is_store_q ? rd_q : rs1_q;
+    assign vrf_raddr_b = rs2_q;
 
     // Result Mux: Select data to be written to VRF
-    assign result_data_mux = (funct7_q == FUNCT7_VLD) ? vlsu_load_data : exec_result;
+    assign result_data_mux = (funct7_q == `FUNCT7_VLD) ? vlsu_load_data : exec_result;
     assign vrf_wdata = result_data_mux;
     assign vrf_waddr = rd_q; // Latched destination register
 
@@ -246,6 +241,11 @@ module vector_coprocessor #(
             funct7_q <= '0;
             funct3_q <= '0;
             scalar_val_q <= '0;
+
+	    is_load_q <= 1'b0;
+            is_store_q <= 1'b0;
+            is_exec_q <= 1'b0;
+
         end else begin
             state <= next_state;
             if (accept_issue) begin
@@ -257,6 +257,10 @@ module vector_coprocessor #(
                 funct3_q <= decoded_instr.funct3;
                 // ** FIX: Using `rs1_val` (from backup) - assuming previous error was a cascade **
                 scalar_val_q <= xif_issue_req_i.rs[0];
+
+		is_load_q <= is_load_op;
+            	is_store_q <= is_store_op;
+            	is_exec_q <= is_exec_op;
             end
         end
     end
@@ -293,9 +297,9 @@ module vector_coprocessor #(
 
             DECODE: begin
                 // One-cycle decode, dispatch next cycle
-                if (is_load_op || is_store_op) begin
+                if (is_load_q || is_store_q) begin
                     next_state = START_LSU;
-                end else if (is_exec_op) begin
+                end else if (is_exec_q) begin
                     next_state = START_EXEC;
                 end else begin
                     next_state = IDLE; 
@@ -303,14 +307,14 @@ module vector_coprocessor #(
             end
 
             START_LSU: begin
-                vlsu_start_load = is_load_op;
-                vlsu_start_store = is_store_op;
+                vlsu_start_load = is_load_q;
+                vlsu_start_store = is_store_q;
                 next_state = WAIT_LSU;
             end
 
             WAIT_LSU: begin
                 if (vlsu_done) begin
-                    if (funct7_q == FUNCT7_VLD) begin
+                    if (funct7_q == `FUNCT7_VLD) begin
                         next_state = WRITE_VRF;  // Go to write state for loads
                     end else begin
                         next_state = WRITEBACK;  // Skip write for stores

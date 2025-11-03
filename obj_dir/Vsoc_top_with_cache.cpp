@@ -14,7 +14,7 @@ Vsoc_top_with_cache::Vsoc_top_with_cache(VerilatedContext* _vcontextp__, const c
     , clk_i{vlSymsp->TOP.clk_i}
     , rst_ni{vlSymsp->TOP.rst_ni}
     , __PVT__soc_top_with_cache__DOT__xif{vlSymsp->TOP.__PVT__soc_top_with_cache__DOT__xif}
-    , __PVT__soc_top_with_cache__DOT__cpu_core__DOT__m_c_obi_instr_if{vlSymsp->TOP.__PVT__soc_top_with_cache__DOT__cpu_core__DOT__m_c_obi_instr_if}
+    , __PVT__soc_top_with_cache__DOT__cpu__DOT__m_c_obi_instr_if{vlSymsp->TOP.__PVT__soc_top_with_cache__DOT__cpu__DOT__m_c_obi_instr_if}
     , rootp{&(vlSymsp->TOP)}
 {
 }
@@ -61,7 +61,7 @@ static void _eval_initial_loop(Vsoc_top_with_cache__Syms* __restrict vlSymsp) {
             Verilated::debug(1);
             __Vchange = Vsoc_top_with_cache___024root___change_request(&(vlSymsp->TOP));
             Verilated::debug(__Vsaved_debug);
-            VL_FATAL_MT("sim/soc_top_with_cache.sv", 11, "",
+            VL_FATAL_MT("sim/soc_top_with_cache.sv", 3, "",
                 "Verilated model didn't DC converge\n"
                 "- See https://verilator.org/warn/DIDNOTCONVERGE");
         } else {
@@ -92,21 +92,13 @@ void Vsoc_top_with_cache::eval_step() {
             Verilated::debug(1);
             __Vchange = Vsoc_top_with_cache___024root___change_request(&(vlSymsp->TOP));
             Verilated::debug(__Vsaved_debug);
-            VL_FATAL_MT("sim/soc_top_with_cache.sv", 11, "",
+            VL_FATAL_MT("sim/soc_top_with_cache.sv", 3, "",
                 "Verilated model didn't converge\n"
                 "- See https://verilator.org/warn/DIDNOTCONVERGE");
         } else {
             __Vchange = Vsoc_top_with_cache___024root___change_request(&(vlSymsp->TOP));
         }
     } while (VL_UNLIKELY(__Vchange));
-}
-
-void Vsoc_top_with_cache::eval_end_step() {
-    VL_DEBUG_IF(VL_DBG_MSGF("+eval_end_step Vsoc_top_with_cache::eval_end_step\n"); );
-#ifdef VM_TRACE
-    // Tracing
-    if (VL_UNLIKELY(vlSymsp->__Vm_dumping)) vlSymsp->_traceDump();
-#endif  // VM_TRACE
 }
 
 //============================================================

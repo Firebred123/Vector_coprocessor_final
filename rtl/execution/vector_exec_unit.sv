@@ -456,7 +456,7 @@ module vector_exec_unit #(
     // Debug Output
     // =========================================================================
     
-    `ifdef DEBUG_EXEC
+    //`ifdef DEBUG_EXEC
     always @(posedge clk_i) begin
         if (start_i && !busy_q) begin
             $display("EXEC: Starting %s operation at cycle %0d", 
@@ -492,6 +492,6 @@ module vector_exec_unit #(
             $display("  [%0d, %0d]", matrix_c[1][0][31:0], matrix_c[1][1][31:0]);
         end
     end
-    `endif
+    //`endif
 
 endmodule

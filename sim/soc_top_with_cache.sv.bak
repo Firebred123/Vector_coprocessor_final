@@ -1,146 +1,145 @@
-// soc_top_with_cache.sv - SoC with instruction and data caches
-// Fixed version with proper memory initialization and cache integration
+// soc_top_with_cache.sv - SoC top level with I-cache and D-cache
+// FIXED VERSION: Properly detects completion signal at 0x1000
+
+`timescale 1ns/1ps
 
 module soc_top_with_cache (
-    input logic clk_i,
-    input logic rst_ni
+    input  logic clk_i,
+    input  logic rst_ni
 );
+
     import cv32e40x_pkg::*;
     import cv32e40x_xif_pkg::*;
-
-    // =========================================================================
-    // Parameters
-    // =========================================================================
-    parameter MEM_SIZE = 32768;  // 32KB main memory
-    parameter MEM_WORDS = MEM_SIZE / 4;
-    parameter CACHE_LINE_SIZE = 32;  // 32 bytes per cache line
-    parameter ICACHE_SIZE = 16384;   // 16KB I-cache
-    parameter DCACHE_SIZE = 16384;   // 16KB D-cache
-
-    // =========================================================================
-    // Main Memory with Preloaded Instructions
-    // =========================================================================
-    logic [31:0] main_memory [0:MEM_WORDS-1];
     
-    // Memory initialization from hex file
+    // =========================================================================
+    // Parameters and Constants
+    // =========================================================================
+    
+    // Memory configuration
+    localparam MEM_SIZE = 8192;  // 8KB main memory (words)
+    localparam MEM_ADDR_WIDTH = $clog2(MEM_SIZE);
+    
+    // Cache configuration
+    localparam ICACHE_SIZE = 1024;  // 1KB I-cache (bytes)
+    localparam DCACHE_SIZE = 1024;  // 1KB D-cache (bytes)
+    localparam CACHE_LINE_SIZE = 32; // 32 bytes per cache line
+    
+    // =========================================================================
+    // Internal Signals
+    // =========================================================================
+    
+    // Instruction interface
+    logic        instr_req;
+    logic        instr_gnt;
+    logic [31:0] instr_addr;
+    logic [31:0] instr_rdata;
+    logic        instr_rvalid;
+    logic        instr_err;
+    
+    // Data interface
+    logic        data_req;
+    logic        data_gnt;
+    logic        data_we;
+    logic [3:0]  data_be;
+    logic [31:0] data_addr;
+    logic [31:0] data_wdata;
+    logic [31:0] data_rdata;
+    logic        data_rvalid;
+    logic        data_err;
+    
+    // Main memory - increase size to ensure 0x1000 is accessible
+    logic [31:0] main_memory [0:MEM_SIZE-1];
+    
+    // X-Interface
+    cv32e40x_if_xif xif();
+    
+    // =========================================================================
+    // Memory Initialization
+    // =========================================================================
+    
     initial begin
-        integer i;
-        string mem_file = "memory_words.hex";
+        string mem_file;
+        int i;
         
-        // Initialize all memory to NOP (0x00000013)
-        for (i = 0; i < MEM_WORDS; i++) begin
-            main_memory[i] = 32'h00000013;
+        // Initialize memory to zero
+        for (i = 0; i < MEM_SIZE; i++) begin
+            main_memory[i] = 32'h0;
         end
         
-        // Load program from hex file if it exists
-        if ($test$plusargs("MEMORY_FILE")) begin
-            $value$plusargs("MEMORY_FILE=%s", mem_file);
+        // Load memory from file if provided
+        if ($value$plusargs("MEMORY_FILE=%s", mem_file)) begin
+            $readmemh(mem_file, main_memory);
+            $display("Loaded memory from: %s", mem_file);
+        end else begin
+            // Default load from memory_words.hex
+            $readmemh("memory_words.hex", main_memory);
+            $display("Loading memory from: memory_words.hex");
         end
         
-        $display("Loading memory from: %s", mem_file);
-        $readmemh(mem_file, main_memory);
-        
-        // Display first few instructions for verification
         $display("=== Memory Initialization ===");
         $display("First 10 instructions:");
-        for (i = 0; i < 10 && i < MEM_WORDS; i++) begin
+        for (i = 0; i < 10; i++) begin
             $display("  [0x%08x]: 0x%08x", i*4, main_memory[i]);
         end
         $display("=============================");
     end
-
-    // =========================================================================
-    // CPU Interfaces
-    // =========================================================================
     
-    // Instruction interface (OBI)
-    logic instr_req, instr_gnt, instr_rvalid;
-    logic [31:0] instr_addr, instr_rdata;
-    
-    // Data interface (OBI)
-    logic data_req, data_gnt, data_rvalid, data_we;
-    logic [3:0] data_be;
-    logic [31:0] data_addr, data_wdata, data_rdata;
-    
-    // X-IF Interface for vector coprocessor
-    cv32e40x_if_xif #(.X_ID_WIDTH(4)) xif();
-    
-    // VPU memory interface
-    logic vpu_mem_valid, vpu_mem_ready, vpu_mem_result_valid;
-    x_mem_req_t vpu_mem_req;
-    x_mem_result_t vpu_mem_result;
-
     // =========================================================================
     // CPU Core Instance
     // =========================================================================
+    
     cv32e40x_core #(
         .X_EXT(1),
-        .X_ID_WIDTH(4),
-        .LIB(0)
-    ) cpu_core (
+        .X_NUM_RS(2)
+    ) cpu (
         .clk_i(clk_i),
         .rst_ni(rst_ni),
         .scan_cg_en_i(1'b0),
+        .boot_addr_i(32'h0),
+        .mtvec_addr_i(32'h0),
+        .dm_halt_addr_i(32'h0),
+        .dm_exception_addr_i(32'h0),
+        .mhartid_i(32'h0),
+        .mimpid_patch_i(4'h0),  // Add patch ID
+        .fetch_enable_i(1'b1),  // CRITICAL: Enable instruction fetching!
         
-        // Configuration
-        .boot_addr_i(32'h00000000),
-        .dm_exception_addr_i(32'h00000000),
-        .dm_halt_addr_i(32'h00000000),
-        .mhartid_i(32'h00000000),
-        .mimpid_patch_i(4'h0),
-        .mtvec_addr_i(32'h00000000),
-        
-        // Control
-        .fetch_enable_i(1'b1),
-        .core_sleep_o(),
-        
-        // Interrupt interface
-        .irq_i(32'h00000000),
+        // Time and interrupts
+        .time_i(64'h0),
+        .irq_i(32'h0),
         .clic_irq_i(1'b0),
         .clic_irq_id_i('0),
         .clic_irq_level_i('0),
         .clic_irq_priv_i('0),
         .clic_irq_shv_i(1'b0),
-        .time_i(64'h0),
         
-        // Debug interface
-        .debug_req_i(1'b0),
-        .debug_havereset_o(),
-        .debug_running_o(),
-        .debug_mode_if(),
-        .debug_mode_id(),
-        
-        // Instruction memory interface
+        // Instruction interface
         .instr_req_o(instr_req),
         .instr_gnt_i(instr_gnt),
-        .instr_rvalid_i(instr_rvalid),
         .instr_addr_o(instr_addr),
         .instr_memtype_o(),
         .instr_prot_o(),
         .instr_dbg_o(),
         .instr_rdata_i(instr_rdata),
+        .instr_rvalid_i(instr_rvalid),
         .instr_err_i(1'b0),
         
-        // Data memory interface
+        // Data interface
         .data_req_o(data_req),
         .data_gnt_i(data_gnt),
-        .data_rvalid_i(data_rvalid),
         .data_we_o(data_we),
         .data_be_o(data_be),
         .data_addr_o(data_addr),
+        .data_wdata_o(data_wdata),
         .data_memtype_o(),
         .data_prot_o(),
         .data_dbg_o(),
-        .data_wdata_o(data_wdata),
+        .data_atop_o(),
         .data_rdata_i(data_rdata),
+        .data_rvalid_i(data_rvalid),
         .data_err_i(1'b0),
         .data_exokay_i(1'b1),
         
-        // Special control signals
-        .mcycle_o(),
-        .minstret_o(),
-        
-        // X-Interface for vector coprocessor
+        // X-Interface
         .xif_compressed_if(xif.cpu_compressed),
         .xif_issue_if(xif.cpu_issue),
         .xif_commit_if(xif.cpu_commit),
@@ -148,45 +147,59 @@ module soc_top_with_cache (
         .xif_mem_result_if(xif.cpu_mem_result),
         .xif_result_if(xif.cpu_result),
         
-        // Misc
+        // Miscellaneous
         .fencei_flush_req_o(),
         .fencei_flush_ack_i(1'b0),
+        .debug_req_i(1'b0),
+        .core_sleep_o(),
         .wu_wfe_i(1'b0)
     );
-
+    
     // =========================================================================
     // Vector Coprocessor Instance
     // =========================================================================
+    
+    logic vpu_mem_valid;
+    logic vpu_mem_ready;
+    x_mem_req_t vpu_mem_req;
+    logic vpu_mem_result_valid;
+    x_mem_result_t vpu_mem_result;
+    
     vector_coprocessor #(
         .VLEN(256),
+        .ELEMENT_WIDTH(32),
         .X_ID_WIDTH(4)
     ) vpu (
         .clk_i(clk_i),
         .rst_ni(rst_ni),
         
-        // XIF interfaces
-        .xif_compressed_if(xif.coproc_compressed),
-        .xif_issue_if(xif.coproc_issue),
-        .xif_commit_if(xif.coproc_commit),
-        .xif_mem_if(xif.coproc_mem),
-        .xif_mem_result_if(xif.coproc_mem_result),
-        .xif_result_if(xif.coproc_result),
-	.xif_issue_rs1_data_i(xif.issue_rs_data[0]),
+        // X-IF interfaces (connected individually)
+        .xif_issue_valid_i(xif.issue_valid),
+        .xif_issue_ready_o(xif.issue_ready),
+        .xif_issue_req_i(xif.issue_req),
+        .xif_issue_resp_o(xif.issue_resp),
+        
+        .xif_commit_valid_i(xif.commit_valid),
+        .xif_commit_i(xif.commit),
+        
+        .xif_result_valid_o(xif.result_valid),
+        .xif_result_ready_i(xif.result_ready),
+        .xif_result_o(xif.result),
         
         // Memory interface
-        .xif_mem_valid_i(vpu_mem_valid),
+        .xif_mem_valid_o(vpu_mem_valid),
         .xif_mem_ready_i(vpu_mem_ready),
         .xif_mem_req_o(vpu_mem_req),
         .xif_mem_resp_i('0),
         .xif_mem_result_valid_i(vpu_mem_result_valid),
         .xif_mem_result_i(vpu_mem_result)
     );
-
+    
     // =========================================================================
     // Simple I-Cache Implementation
     // =========================================================================
     
-    // I-Cache storage (direct-mapped for simplicity)
+    // I-Cache storage (direct-mapped)
     localparam ICACHE_LINES = ICACHE_SIZE / CACHE_LINE_SIZE;
     localparam ICACHE_INDEX_BITS = $clog2(ICACHE_LINES);
     localparam ICACHE_TAG_BITS = 32 - ICACHE_INDEX_BITS - $clog2(CACHE_LINE_SIZE);
@@ -194,7 +207,7 @@ module soc_top_with_cache (
     typedef struct packed {
         logic valid;
         logic [ICACHE_TAG_BITS-1:0] tag;
-        logic [CACHE_LINE_SIZE*8-1:0] data;  // Full cache line
+        logic [CACHE_LINE_SIZE*8-1:0] data;
     } icache_line_t;
     
     icache_line_t icache [ICACHE_LINES];
@@ -223,8 +236,8 @@ module soc_top_with_cache (
     } icache_state_t;
     
     icache_state_t icache_state, icache_next_state;
-    logic [31:0] icache_refill_addr;  // Moved outside always block
-    logic [31:0] icache_mem_data;     // Moved outside always block
+    logic [31:0] icache_refill_addr;
+    logic [31:0] icache_mem_data;
     
     always_ff @(posedge clk_i or negedge rst_ni) begin
         if (!rst_ni) begin
@@ -243,16 +256,16 @@ module soc_top_with_cache (
             end
         end else begin
             icache_state <= icache_next_state;
+            instr_rvalid <= 1'b0;
             
             case (icache_state)
                 ICACHE_IDLE: begin
-                    instr_rvalid <= 1'b0;
                     if (instr_req) begin
+                        instr_gnt <= 1'b1;
+                        
                         if (icache_hit) begin
                             // Cache hit - return data immediately
-                            instr_gnt <= 1'b1;
                             instr_rvalid <= 1'b1;
-                            // Extract the right word from cache line
                             case (icache_offset[4:2])
                                 3'd0: instr_rdata <= icache[icache_index].data[31:0];
                                 3'd1: instr_rdata <= icache[icache_index].data[63:32];
@@ -265,8 +278,8 @@ module soc_top_with_cache (
                             endcase
                         end else begin
                             // Cache miss - start refill
-                            instr_gnt <= 1'b1;
                             icache_refill_pending <= 1'b1;
+                            icache_refill_addr <= {instr_addr[31:5], 5'b0}; // Aligned to cache line
                             icache_refill_count <= '0;
                         end
                     end else begin
@@ -275,13 +288,9 @@ module soc_top_with_cache (
                 end
                 
                 ICACHE_REFILL: begin
-                    // Refill cache line from memory
-                    icache_refill_addr = {instr_addr[31:5], icache_refill_count, 2'b00};
+                    // Refill cache line from main memory
+                    icache_mem_data = main_memory[(icache_refill_addr >> 2) + icache_refill_count];
                     
-                    // Read from main memory
-                    icache_mem_data = main_memory[icache_refill_addr[31:2]];
-                    
-                    // Store in cache line
                     case (icache_refill_count)
                         3'd0: icache[icache_index].data[31:0] <= icache_mem_data;
                         3'd1: icache[icache_index].data[63:32] <= icache_mem_data;
@@ -343,9 +352,9 @@ module soc_top_with_cache (
             end
         endcase
     end
-
+    
     // =========================================================================
-    // Simple D-Cache Implementation
+    // Simple D-Cache Implementation  
     // =========================================================================
     
     // D-Cache storage (direct-mapped, write-through)
@@ -410,10 +419,12 @@ module soc_top_with_cache (
                             // Write request - write-through
                             data_gnt <= 1'b1;
                             
-                            // Write to main memory
-                            for (int i = 0; i < 4; i++) begin
-                                if (data_be[i]) begin
-                                    main_memory[data_addr[31:2]][i*8 +: 8] <= data_wdata[i*8 +: 8];
+                            // Write to main memory (with bounds checking)
+                            if ((data_addr >> 2) < MEM_SIZE) begin
+                                for (int i = 0; i < 4; i++) begin
+                                    if (data_be[i]) begin
+                                        main_memory[data_addr[31:2]][i*8 +: 8] <= data_wdata[i*8 +: 8];
+                                    end
                                 end
                             end
                             
@@ -427,18 +438,19 @@ module soc_top_with_cache (
                                             end
                                         end
                                     end
-                                    // Add other cases for different offsets...
+                                    // Add other cases as needed...
                                 endcase
                             end
                             
                             data_rvalid <= 1'b1;
+                            data_rdata <= '0;
                         end else begin
                             // Read request
+                            data_gnt <= 1'b1;
+                            
                             if (dcache_hit) begin
                                 // Cache hit
-                                data_gnt <= 1'b1;
                                 data_rvalid <= 1'b1;
-                                
                                 case (dcache_offset[4:2])
                                     3'd0: data_rdata <= dcache[dcache_index].data[31:0];
                                     3'd1: data_rdata <= dcache[dcache_index].data[63:32];
@@ -450,12 +462,9 @@ module soc_top_with_cache (
                                     3'd7: data_rdata <= dcache[dcache_index].data[255:224];
                                 endcase
                             end else begin
-                                // Cache miss - fetch from memory (simplified)
-                                data_gnt <= 1'b1;
-                                data_rvalid <= 1'b1;
-                                data_rdata <= main_memory[data_addr[31:2]];
-                                
-                                // For simplicity, don't refill on reads in this version
+                                // Cache miss - read from main memory
+                                dcache_state <= DCACHE_REFILL;
+                                dcache_refill_count <= '0;
                             end
                         end
                     end else begin
@@ -463,50 +472,69 @@ module soc_top_with_cache (
                     end
                 end
                 
-                // Add other states for more complex cache behavior if needed
+                DCACHE_REFILL: begin
+                    // Simplified refill - just get the data and respond
+                    if ((data_addr >> 2) < MEM_SIZE) begin
+                        data_rdata <= main_memory[data_addr >> 2];
+                    end else begin
+                        data_rdata <= '0;
+                    end
+                    data_rvalid <= 1'b1;
+                    dcache_state <= DCACHE_IDLE;
+                end
             endcase
         end
     end
     
     // =========================================================================
-    // VPU Memory Access Handler
+    // VPU Memory Interface
     // =========================================================================
+    
     always_ff @(posedge clk_i or negedge rst_ni) begin
         if (!rst_ni) begin
             vpu_mem_ready <= 1'b0;
             vpu_mem_result_valid <= 1'b0;
             vpu_mem_result <= '0;
         end else begin
-            vpu_mem_ready <= 1'b0;
-            vpu_mem_result_valid <= 1'b0;
+            vpu_mem_ready <= 1'b1;
             
-            if (vpu_mem_valid && !vpu_mem_ready) begin
-                vpu_mem_ready <= 1'b1;
+            if (vpu_mem_valid && vpu_mem_ready) begin
+                vpu_mem_result_valid <= 1'b1;
+                vpu_mem_result.id <= vpu_mem_req.id;
+                vpu_mem_result.err <= 1'b0;
+                // No exccode field in x_mem_result_t
                 
                 if (vpu_mem_req.we) begin
                     // Write
-                    for (int i = 0; i < 4; i++) begin
-                        if (vpu_mem_req.be[i]) begin
-                            main_memory[vpu_mem_req.addr[31:2]][i*8 +: 8] <= 
-                                vpu_mem_req.wdata[i*8 +: 8];
+                    if ((vpu_mem_req.addr >> 2) < MEM_SIZE) begin
+                        for (int i = 0; i < 32; i++) begin
+                            if (vpu_mem_req.be[i]) begin
+                                main_memory[(vpu_mem_req.addr >> 2) + (i >> 2)][(i%4)*8 +: 8] 
+                                    <= vpu_mem_req.wdata[i*8 +: 8];
+                            end
                         end
                     end
+                    vpu_mem_result.rdata <= '0;
                 end else begin
                     // Read
-                    vpu_mem_result.rdata <= main_memory[vpu_mem_req.addr[31:2]];
+                    for (int i = 0; i < 8; i++) begin
+                        if ((vpu_mem_req.addr >> 2) + i < MEM_SIZE) begin
+                            vpu_mem_result.rdata[i*32 +: 32] <= main_memory[(vpu_mem_req.addr >> 2) + i];
+                        end else begin
+                            vpu_mem_result.rdata[i*32 +: 32] <= '0;
+                        end
+                    end
                 end
-                
-                vpu_mem_result.id <= vpu_mem_req.id;
-                vpu_mem_result.err <= 1'b0;
-                vpu_mem_result.exokay <= 1'b1;
-                vpu_mem_result_valid <= 1'b1;
+            end else begin
+                vpu_mem_result_valid <= 1'b0;
             end
         end
     end
     
     // =========================================================================
-    // Performance Monitoring
+    // Performance Counters and Statistics
     // =========================================================================
+    
     logic [31:0] cycle_count;
     logic [31:0] icache_hits, icache_misses;
     logic [31:0] dcache_hits, dcache_misses;
@@ -523,8 +551,20 @@ module soc_top_with_cache (
         end else begin
             cycle_count <= cycle_count + 1;
             
-            // Count cache statistics
-            if (instr_req) begin
+            // Debug output every 100 cycles
+            if (cycle_count % 100 == 0 && cycle_count > 0 && cycle_count < 1000) begin
+                $display("Cycle %d: PC=0x%08x, instr_req=%b, instr_gnt=%b, instr_rvalid=%b", 
+                         cycle_count, instr_addr, instr_req, instr_gnt, instr_rvalid);
+                if (instr_rvalid) begin
+                    $display("  Fetched instruction: 0x%08x", instr_rdata);
+                end
+                if (data_req) begin
+                    $display("  Data access: addr=0x%08x, we=%b", data_addr, data_we);
+                end
+            end
+            
+            // Track I-cache statistics
+            if (instr_req && instr_gnt) begin
                 if (icache_hit) begin
                     icache_hits <= icache_hits + 1;
                 end else begin
@@ -532,7 +572,8 @@ module soc_top_with_cache (
                 end
             end
             
-            if (data_req && !data_we) begin
+            // Track D-cache statistics
+            if (data_req && data_gnt && !data_we) begin
                 if (dcache_hit) begin
                     dcache_hits <= dcache_hits + 1;
                 end else begin
@@ -543,26 +584,13 @@ module soc_top_with_cache (
             if (instr_rvalid) begin
                 instructions_executed <= instructions_executed + 1;
             end
-            
-            // Display statistics periodically
-            if (cycle_count[9:0] == '0 && cycle_count > 0) begin
-                $display("=== Cache Statistics at cycle %0d ===", cycle_count);
-                $display("  I-Cache: Hits=%0d, Misses=%0d, Hit Rate=%.1f%%", 
-                         icache_hits, icache_misses, 
-                         100.0 * icache_hits / (icache_hits + icache_misses + 1));
-                $display("  D-Cache: Hits=%0d, Misses=%0d, Hit Rate=%.1f%%", 
-                         dcache_hits, dcache_misses,
-                         100.0 * dcache_hits / (dcache_hits + dcache_misses + 1));
-                $display("  Instructions: %0d, IPC=%.2f", 
-                         instructions_executed, 
-                         1.0 * instructions_executed / cycle_count);
-            end
         end
     end
     
     // =========================================================================
     // Simulation Control
     // =========================================================================
+    
     initial begin
         if ($test$plusargs("WAVES")) begin
             $dumpfile("simulation.vcd");
@@ -573,23 +601,38 @@ module soc_top_with_cache (
     // Detect completion
     logic [31:0] prev_pc;
     logic [7:0] pc_stall_count;
+    logic program_done;
+    
+    // Check for completion marker at address 0x1000
+    assign program_done = (main_memory[32'h1000 >> 2] === 32'h00000001);
     
     always_ff @(posedge clk_i or negedge rst_ni) begin
         if (!rst_ni) begin
             prev_pc <= '0;
             pc_stall_count <= '0;
         end else begin
+            // Check for program completion marker
+            if (program_done) begin
+                $display("\n=== PROGRAM COMPLETED SUCCESSFULLY ===");
+                $display("Total cycles: %0d", cycle_count);
+                $display("Instructions executed: %0d", instructions_executed);
+                $display("Final I-Cache Hit Rate: %.1f%%", 
+                         100.0 * icache_hits / (icache_hits + icache_misses + 1));
+                $display("Final D-Cache Hit Rate: %.1f%%", 
+                         100.0 * dcache_hits / (dcache_hits + dcache_misses + 1));
+                $display("===========================\n");
+                $finish;
+            end
+            
+            // Also detect infinite loops (PC stuck at same address)
             if (instr_req) begin
                 if (instr_addr == prev_pc) begin
                     pc_stall_count <= pc_stall_count + 1;
                     if (pc_stall_count > 100) begin
-                        $display("\n=== SIMULATION COMPLETE ===");
+                        $display("\n=== INFINITE LOOP DETECTED (Program likely complete) ===");
+                        $display("Stuck at PC: 0x%08x", instr_addr);
                         $display("Total cycles: %0d", cycle_count);
                         $display("Instructions executed: %0d", instructions_executed);
-                        $display("Final I-Cache Hit Rate: %.1f%%", 
-                                 100.0 * icache_hits / (icache_hits + icache_misses + 1));
-                        $display("Final D-Cache Hit Rate: %.1f%%", 
-                                 100.0 * dcache_hits / (dcache_hits + dcache_misses + 1));
                         $display("===========================\n");
                         $finish;
                     end
@@ -599,9 +642,11 @@ module soc_top_with_cache (
                 end
             end
             
-            // Timeout
+            // Timeout with debug info
             if (cycle_count > 100000) begin
                 $display("Simulation timeout at cycle %0d", cycle_count);
+                $display("Checking memory[0x1000]: 0x%08x", main_memory[32'h1000 >> 2]);
+                $display("PC: 0x%08x", instr_addr);
                 $finish;
             end
         end
