@@ -17,6 +17,10 @@ _start:
     # Load vector B into v2
     mv a0, s1
     .word ((FUNCT7_VLD << 25) | (0 << 20) | (A0 << 15) | (0 << 12) | (V2 << 7) | OPCODE_CUSTOM0)
+
+    mv a0, s2
+    .word ((FUNCT7_VLD << 25) | (0 << 20) | (A0 << 15) | (0 << 12) | (V2 << 7) | OPCODE_CUSTOM0)
+
     
     # VMUL: v3 = v1 * v2
     .word ((FUNCT7_VMUL << 25) | (V2 << 20) | (V1 << 15) | (0 << 12) | (V3 << 7) | OPCODE_CUSTOM0)

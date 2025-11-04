@@ -455,6 +455,12 @@ module vector_exec_unit #(
     // =========================================================================
     // Debug Output
     // =========================================================================
+
+
+    logic done_q;
+    always_ff @(posedge clk_i) done_q <= done_o;
+
+
     
     //`ifdef DEBUG_EXEC
     always @(posedge clk_i) begin
@@ -467,7 +473,33 @@ module vector_exec_unit #(
                      (funct7_i == `FUNCT7_VMUL) ? "VMUL" : "UNKNOWN",
                      cycle_count);
         end
-        
+
+
+	if (done_q) begin
+    case (funct7_q)
+        `FUNCT7_VMUL: begin
+            $display("VMUL result at time %0t", $time);
+            $display("  a[1] = %0d", vec_a_i[63:32]);
+            $display("  b[1] = %0d", vec_b_i[63:32]);
+            $display("  result[1] = %0d  (a*b = %0d * %0d = %0d)", 
+                      result_o[63:32], vec_a_i[63:32], vec_b_i[63:32],
+                      vec_a_i[63:32] * vec_b_i[63:32]);
+        end
+
+        `FUNCT7_VMAC: begin
+            $display("VMAC result at time %0t", $time);
+            $display("  a[0] = %0d", vec_a_i[31:0]);
+            $display("  b[0] = %0d", vec_b_i[31:0]);
+            $display("  c[0] = %0d", vec_c_i[31:0]);
+            $display("  result[0] = %0d  (a*b+c = %0d * %0d + %0d = %0d)", 
+                      result_o[31:0],
+                      vec_a_i[31:0], vec_b_i[31:0], vec_c_i[31:0],
+                      vec_a_i[31:0] * vec_b_i[31:0] + vec_c_i[31:0]);
+        end
+    endcase
+end
+
+
         if (mm_state == MM_FEED_K) begin
             $display("EXEC: Feeding k=%0d for tile[%0d,%0d]", tile_k, tile_row, tile_col);
             $display("  A[%0d][%0d]=%0d, A[%0d][%0d]=%0d", 

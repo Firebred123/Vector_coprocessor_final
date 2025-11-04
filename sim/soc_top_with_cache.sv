@@ -22,8 +22,7 @@ module soc_top_with_cache (
     logic [31:0] main_memory [0:MEM_SIZE-1];
     
     // X-Interface
-    cv32e40x_if_xif #(.X_ID_WIDTH(4)) xif();
-    
+    cv32e40x_if_xif #(.X_ID_WIDTH(4)) xif();    
     // Memory initialization
     initial begin
         string mem_file;

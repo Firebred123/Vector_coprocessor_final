@@ -30,7 +30,7 @@ RISCV_CFLAGS = -march=rv32im -mabi=ilp32 -nostartfiles -T$(TEST_DIR)/link.ld -I$
 
 # Verilator flags
 VERILATOR_FLAGS = --cc --exe --build -j 4 \
-	--top-module soc_top_with_cache \
+	--top-module soc_top \
 	--timescale 1ns/1ps \
 	--trace \
 	-I$(VENDOR_DIR)/rtl/include/ \
@@ -123,7 +123,7 @@ PROJECT_RTL = \
 
 # SoC top module (choose one)
 # SOC_TOP = $(SIM_DIR)/soc_top.sv              # Original without caches
-SOC_TOP = $(SIM_DIR)/soc_top_with_cache.sv          # New with caches
+SOC_TOP = $(SIM_DIR)/soc_top.sv          # New with caches
 
 # Testbench (choose based on target)
 TESTBENCH_CACHED = $(TEST_DIR)/main_cached.cpp
@@ -212,7 +212,7 @@ compile-nocache: $(MEM_FILE)
 run: compile
 	@echo "--- Running Simulation with Caches ---"
 	@cp $(MEM_FILE) $(OBJ_DIR)/
-	cd $(OBJ_DIR) && ./Vsoc_top_with_cache
+	cd $(OBJ_DIR) && ./Vsoc_top
 
 # Run without caches
 run-nocache: compile-nocache
