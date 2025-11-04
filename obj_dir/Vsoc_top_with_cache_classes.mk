@@ -38,6 +38,7 @@ VM_CLASSES_SLOW += \
 	Vsoc_top_with_cache__ConstPool_0 \
 	Vsoc_top_with_cache___024root__Slow \
 	Vsoc_top_with_cache___024root__1__Slow \
+	Vsoc_top_with_cache___024root__2__Slow \
 	Vsoc_top_with_cache___024unit__Slow \
 	Vsoc_top_with_cache_cv32e40x_if_xif__Slow \
 	Vsoc_top_with_cache_cv32e40x_if_c_obi__Slow \

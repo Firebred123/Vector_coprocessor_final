@@ -386,6 +386,7 @@ VL_MODULE(Vsoc_top_with_cache___024root) {
         CData/*0:0*/ soc_top_with_cache__DOT__vpu__DOT__vlsu_start_load;
         CData/*0:0*/ soc_top_with_cache__DOT__vpu__DOT__vlsu_start_store;
         CData/*0:0*/ soc_top_with_cache__DOT__vpu__DOT__exec_start;
+        CData/*0:0*/ soc_top_with_cache__DOT__vpu__DOT__exec_done;
         CData/*0:0*/ soc_top_with_cache__DOT__vpu__DOT__accept_issue;
         CData/*0:0*/ soc_top_with_cache__DOT__vpu__DOT__is_load_op;
         CData/*0:0*/ soc_top_with_cache__DOT__vpu__DOT__is_store_op;
@@ -393,6 +394,7 @@ VL_MODULE(Vsoc_top_with_cache___024root) {
         CData/*0:0*/ soc_top_with_cache__DOT__vpu__DOT__is_load_q;
         CData/*0:0*/ soc_top_with_cache__DOT__vpu__DOT__is_store_q;
         CData/*0:0*/ soc_top_with_cache__DOT__vpu__DOT__is_exec_q;
+        CData/*2:0*/ soc_top_with_cache__DOT__vpu__DOT__state_prev;
         CData/*4:0*/ soc_top_with_cache__DOT__vpu__DOT__vrf_inst__DOT__raddr3_i;
         CData/*2:0*/ soc_top_with_cache__DOT__vpu__DOT__vlsu_inst__DOT__state;
         CData/*2:0*/ soc_top_with_cache__DOT__vpu__DOT__vlsu_inst__DOT__next_state;
@@ -422,10 +424,10 @@ VL_MODULE(Vsoc_top_with_cache___024root) {
         SData/*9:0*/ soc_top_with_cache__DOT__cpu__DOT__irq_id_ctrl;
         SData/*11:0*/ soc_top_with_cache__DOT__cpu__DOT__cs_registers_i__DOT__csr_raddr;
         SData/*15:0*/ soc_top_with_cache__DOT__cpu__DOT__cs_registers_i__DOT__hpm_events;
-        SData/*15:0*/ soc_top_with_cache__DOT__cpu__DOT__cs_registers_i__DOT__hpm_events_raw;
-        SData/*10:0*/ soc_top_with_cache__DOT__cpu__DOT__controller_i__DOT__controller_fsm_i__DOT__exception_cause_wb;
     };
     struct {
+        SData/*15:0*/ soc_top_with_cache__DOT__cpu__DOT__cs_registers_i__DOT__hpm_events_raw;
+        SData/*10:0*/ soc_top_with_cache__DOT__cpu__DOT__controller_i__DOT__controller_fsm_i__DOT__exception_cause_wb;
         SData/*10:0*/ soc_top_with_cache__DOT__cpu__DOT__controller_i__DOT__controller_fsm_i__DOT__exc_cause;
         IData/*31:0*/ soc_top_with_cache__DOT__instr_rdata;
         IData/*31:0*/ soc_top_with_cache__DOT__data_rdata;
@@ -488,10 +490,10 @@ VL_MODULE(Vsoc_top_with_cache___024root) {
         IData/*31:0*/ soc_top_with_cache__DOT__cpu__DOT__cs_registers_i__DOT__tdata2_rdata;
         IData/*31:0*/ soc_top_with_cache__DOT__cpu__DOT__cs_registers_i__DOT__dcsr_n;
         IData/*31:0*/ soc_top_with_cache__DOT__cpu__DOT__cs_registers_i__DOT__dcsr_rdata;
-        IData/*31:0*/ soc_top_with_cache__DOT__cpu__DOT__cs_registers_i__DOT__dpc_n;
-        IData/*31:0*/ soc_top_with_cache__DOT__cpu__DOT__cs_registers_i__DOT__dscratch0_n;
     };
     struct {
+        IData/*31:0*/ soc_top_with_cache__DOT__cpu__DOT__cs_registers_i__DOT__dpc_n;
+        IData/*31:0*/ soc_top_with_cache__DOT__cpu__DOT__cs_registers_i__DOT__dscratch0_n;
         IData/*31:0*/ soc_top_with_cache__DOT__cpu__DOT__cs_registers_i__DOT__dscratch1_n;
         IData/*31:0*/ soc_top_with_cache__DOT__cpu__DOT__cs_registers_i__DOT__mscratch_n;
         IData/*31:0*/ soc_top_with_cache__DOT__cpu__DOT__cs_registers_i__DOT__jvt_n;
@@ -554,10 +556,10 @@ VL_MODULE(Vsoc_top_with_cache___024root) {
         IData/*31:0*/ soc_top_with_cache__DOT__cpu__DOT__register_file_wrapper_i__DOT__register_file_i__DOT__gen_rf__BRA__24__KET____DOT__register_write_behavioral__DOT__unnamedblk1__DOT__j;
         IData/*31:0*/ soc_top_with_cache__DOT__cpu__DOT__register_file_wrapper_i__DOT__register_file_i__DOT__gen_rf__BRA__25__KET____DOT__register_write_behavioral__DOT__unnamedblk1__DOT__j;
         IData/*31:0*/ soc_top_with_cache__DOT__cpu__DOT__register_file_wrapper_i__DOT__register_file_i__DOT__gen_rf__BRA__26__KET____DOT__register_write_behavioral__DOT__unnamedblk1__DOT__j;
-        IData/*31:0*/ soc_top_with_cache__DOT__cpu__DOT__register_file_wrapper_i__DOT__register_file_i__DOT__gen_rf__BRA__27__KET____DOT__register_write_behavioral__DOT__unnamedblk1__DOT__j;
-        IData/*31:0*/ soc_top_with_cache__DOT__cpu__DOT__register_file_wrapper_i__DOT__register_file_i__DOT__gen_rf__BRA__28__KET____DOT__register_write_behavioral__DOT__unnamedblk1__DOT__j;
     };
     struct {
+        IData/*31:0*/ soc_top_with_cache__DOT__cpu__DOT__register_file_wrapper_i__DOT__register_file_i__DOT__gen_rf__BRA__27__KET____DOT__register_write_behavioral__DOT__unnamedblk1__DOT__j;
+        IData/*31:0*/ soc_top_with_cache__DOT__cpu__DOT__register_file_wrapper_i__DOT__register_file_i__DOT__gen_rf__BRA__28__KET____DOT__register_write_behavioral__DOT__unnamedblk1__DOT__j;
         IData/*31:0*/ soc_top_with_cache__DOT__cpu__DOT__register_file_wrapper_i__DOT__register_file_i__DOT__gen_rf__BRA__29__KET____DOT__register_write_behavioral__DOT__unnamedblk1__DOT__j;
         IData/*31:0*/ soc_top_with_cache__DOT__cpu__DOT__register_file_wrapper_i__DOT__register_file_i__DOT__gen_rf__BRA__30__KET____DOT__register_write_behavioral__DOT__unnamedblk1__DOT__j;
         IData/*31:0*/ soc_top_with_cache__DOT__cpu__DOT__register_file_wrapper_i__DOT__register_file_i__DOT__gen_rf__BRA__31__KET____DOT__register_write_behavioral__DOT__unnamedblk1__DOT__j;
@@ -567,6 +569,7 @@ VL_MODULE(Vsoc_top_with_cache___024root) {
         VlWide<8>/*255:0*/ soc_top_with_cache__DOT__vpu__DOT__vrf_rdata_a;
         VlWide<8>/*255:0*/ soc_top_with_cache__DOT__vpu__DOT__vrf_rdata_b;
         VlWide<8>/*255:0*/ soc_top_with_cache__DOT__vpu__DOT__exec_result;
+        VlWide<8>/*255:0*/ soc_top_with_cache__DOT__vpu__DOT__result_data_mux;
         IData/*31:0*/ soc_top_with_cache__DOT__vpu__DOT__vrf_inst__DOT__unnamedblk1__DOT__i;
         IData/*31:0*/ soc_top_with_cache__DOT__vpu__DOT__vrf_inst__DOT__unnamedblk2__DOT__i;
         IData/*31:0*/ soc_top_with_cache__DOT__vpu__DOT__vlsu_inst__DOT__current_addr;
@@ -619,11 +622,11 @@ VL_MODULE(Vsoc_top_with_cache___024root) {
         QData/*54:0*/ soc_top_with_cache__DOT__cpu__DOT__id_stage_i__DOT__decoder_i__DOT__decoder_b_ctrl_int;
         QData/*54:0*/ soc_top_with_cache__DOT__cpu__DOT__id_stage_i__DOT__decoder_i__DOT__decoder_ctrl_mux;
         QData/*63:0*/ soc_top_with_cache__DOT__cpu__DOT__ex_stage_i__DOT__alu_i__DOT__shifter_tmp;
+    };
+    struct {
         QData/*32:0*/ soc_top_with_cache__DOT__cpu__DOT__ex_stage_i__DOT__mul__DOT__mult_i__DOT__mulh_acc;
         QData/*32:0*/ soc_top_with_cache__DOT__cpu__DOT__ex_stage_i__DOT__mul__DOT__mult_i__DOT__mulh_acc_next;
         QData/*32:0*/ soc_top_with_cache__DOT__cpu__DOT__ex_stage_i__DOT__mul__DOT__mult_i__DOT__mulh_acc_res;
-    };
-    struct {
         QData/*33:0*/ soc_top_with_cache__DOT__cpu__DOT__ex_stage_i__DOT__mul__DOT__mult_i__DOT__result;
         VlWide<3>/*76:0*/ soc_top_with_cache__DOT__cpu__DOT__load_store_unit_i__DOT__trans;
         VlWide<3>/*80:0*/ soc_top_with_cache__DOT__cpu__DOT__load_store_unit_i__DOT__wpt_trans;
@@ -696,6 +699,8 @@ VL_MODULE(Vsoc_top_with_cache___024root) {
         CData/*3:0*/ __Vfunc_mcontrol2_6_match_resolve__29__next_value;
         CData/*3:0*/ __Vfunc_mcontrol2_6_match_resolve__32__Vfuncout;
         CData/*3:0*/ __Vfunc_mcontrol2_6_match_resolve__32__next_value;
+        CData/*4:0*/ __Vdly__soc_top_with_cache__DOT__vpu__DOT__rd_q;
+        CData/*2:0*/ __Vdly__soc_top_with_cache__DOT__vpu__DOT__state;
         CData/*0:0*/ __Vdlyvset__soc_top_with_cache__DOT__vpu__DOT__exec_unit_inst__DOT__matrix_c__v0;
         CData/*2:0*/ __Vdly__soc_top_with_cache__DOT__vpu__DOT__exec_unit_inst__DOT__tile_row;
         CData/*2:0*/ __Vdly__soc_top_with_cache__DOT__vpu__DOT__exec_unit_inst__DOT__tile_col;
@@ -730,10 +735,10 @@ VL_MODULE(Vsoc_top_with_cache___024root) {
         CData/*0:0*/ __Vdlyvset__soc_top_with_cache__DOT__vpu__DOT__exec_unit_inst__DOT__systolic_inst__DOT__pe__v14;
         CData/*0:0*/ __Vdlyvset__soc_top_with_cache__DOT__vpu__DOT__exec_unit_inst__DOT__systolic_inst__DOT__pe__v16;
         CData/*0:0*/ __Vdlyvset__soc_top_with_cache__DOT__vpu__DOT__exec_unit_inst__DOT__systolic_inst__DOT__pe__v17;
-        CData/*0:0*/ __Vdlyvset__soc_top_with_cache__DOT__vpu__DOT__exec_unit_inst__DOT__systolic_inst__DOT__pe__v18;
-        CData/*0:0*/ __Vdlyvset__soc_top_with_cache__DOT__vpu__DOT__exec_unit_inst__DOT__systolic_inst__DOT__pe__v22;
     };
     struct {
+        CData/*0:0*/ __Vdlyvset__soc_top_with_cache__DOT__vpu__DOT__exec_unit_inst__DOT__systolic_inst__DOT__pe__v18;
+        CData/*0:0*/ __Vdlyvset__soc_top_with_cache__DOT__vpu__DOT__exec_unit_inst__DOT__systolic_inst__DOT__pe__v22;
         CData/*0:0*/ __Vdlyvset__soc_top_with_cache__DOT__vpu__DOT__exec_unit_inst__DOT__systolic_inst__DOT__pe__v23;
         CData/*0:0*/ __Vdlyvset__soc_top_with_cache__DOT__vpu__DOT__exec_unit_inst__DOT__systolic_inst__DOT__pe__v25;
         CData/*0:0*/ __Vdlyvset__soc_top_with_cache__DOT__vpu__DOT__exec_unit_inst__DOT__systolic_inst__DOT__pe__v27;
@@ -796,10 +801,10 @@ VL_MODULE(Vsoc_top_with_cache___024root) {
         CData/*0:0*/ __Vdlyvset__soc_top_with_cache__DOT__cpu__DOT__register_file_wrapper_i__DOT__register_file_i__DOT__mem__v48;
         CData/*0:0*/ __Vdlyvset__soc_top_with_cache__DOT__cpu__DOT__register_file_wrapper_i__DOT__register_file_i__DOT__mem__v49;
         CData/*0:0*/ __Vdlyvset__soc_top_with_cache__DOT__cpu__DOT__register_file_wrapper_i__DOT__register_file_i__DOT__mem__v50;
-        CData/*0:0*/ __Vdlyvset__soc_top_with_cache__DOT__cpu__DOT__register_file_wrapper_i__DOT__register_file_i__DOT__mem__v51;
-        CData/*0:0*/ __Vdlyvset__soc_top_with_cache__DOT__cpu__DOT__register_file_wrapper_i__DOT__register_file_i__DOT__mem__v52;
     };
     struct {
+        CData/*0:0*/ __Vdlyvset__soc_top_with_cache__DOT__cpu__DOT__register_file_wrapper_i__DOT__register_file_i__DOT__mem__v51;
+        CData/*0:0*/ __Vdlyvset__soc_top_with_cache__DOT__cpu__DOT__register_file_wrapper_i__DOT__register_file_i__DOT__mem__v52;
         CData/*0:0*/ __Vdlyvset__soc_top_with_cache__DOT__cpu__DOT__register_file_wrapper_i__DOT__register_file_i__DOT__mem__v53;
         CData/*0:0*/ __Vdlyvset__soc_top_with_cache__DOT__cpu__DOT__register_file_wrapper_i__DOT__register_file_i__DOT__mem__v54;
         CData/*0:0*/ __Vdlyvset__soc_top_with_cache__DOT__cpu__DOT__register_file_wrapper_i__DOT__register_file_i__DOT__mem__v55;
@@ -819,8 +824,11 @@ VL_MODULE(Vsoc_top_with_cache___024root) {
         VlWide<6>/*191:0*/ __Vchglast__TOP__soc_top_with_cache__DOT__cpu__DOT__ex_stage_i__DOT__alu_i__DOT__alu_b_cpop_i__DOT__sum;
         CData/*0:0*/ __Vchglast__TOP__soc_top_with_cache__DOT__cpu__DOT__load_store_unit_i__DOT__wpt_trans_ready;
         CData/*0:0*/ __Vchglast__TOP__soc_top_with_cache__DOT__cpu__DOT__load_store_unit_i__DOT__wpt_resp_valid;
+        CData/*0:0*/ __Vchglast__TOP__soc_top_with_cache__DOT__vpu__DOT__exec_start;
+        CData/*2:0*/ __Vchglast__TOP__soc_top_with_cache__DOT__vpu__DOT__vlsu_inst__DOT__next_state;
         SData/*8:0*/ soc_top_with_cache__DOT____Vcellout__vpu__xif_issue_resp_o;
         IData/*31:0*/ soc_top_with_cache__DOT____Vlvbound1;
+        IData/*31:0*/ __Vdly__soc_top_with_cache__DOT__vpu__DOT__scalar_val_q;
         IData/*31:0*/ __Vdlyvlsb__soc_top_with_cache__DOT__vpu__DOT__exec_unit_inst__DOT__systolic_inst__DOT__pe__v0;
         IData/*31:0*/ __Vdlyvlsb__soc_top_with_cache__DOT__vpu__DOT__exec_unit_inst__DOT__systolic_inst__DOT__pe__v1;
         IData/*31:0*/ __Vdlyvval__soc_top_with_cache__DOT__vpu__DOT__exec_unit_inst__DOT__systolic_inst__DOT__pe__v1;
@@ -859,13 +867,13 @@ VL_MODULE(Vsoc_top_with_cache___024root) {
         IData/*31:0*/ __Vdlyvlsb__soc_top_with_cache__DOT__vpu__DOT__exec_unit_inst__DOT__systolic_inst__DOT__pe__v29;
         IData/*31:0*/ __Vdlyvlsb__soc_top_with_cache__DOT__vpu__DOT__exec_unit_inst__DOT__systolic_inst__DOT__pe__v30;
         IData/*31:0*/ __Vdlyvlsb__soc_top_with_cache__DOT__vpu__DOT__exec_unit_inst__DOT__systolic_inst__DOT__pe__v31;
+    };
+    struct {
         IData/*31:0*/ __Vdlyvlsb__soc_top_with_cache__DOT__vpu__DOT__exec_unit_inst__DOT__systolic_inst__DOT__pe__v32;
         IData/*31:0*/ __Vdlyvlsb__soc_top_with_cache__DOT__vpu__DOT__exec_unit_inst__DOT__systolic_inst__DOT__pe__v33;
         IData/*31:0*/ __Vdlyvlsb__soc_top_with_cache__DOT__vpu__DOT__exec_unit_inst__DOT__systolic_inst__DOT__pe__v34;
         IData/*31:0*/ __Vdlyvval__soc_top_with_cache__DOT__vpu__DOT__exec_unit_inst__DOT__systolic_inst__DOT__pe__v34;
         IData/*31:0*/ __Vdlyvlsb__soc_top_with_cache__DOT__vpu__DOT__exec_unit_inst__DOT__systolic_inst__DOT__pe__v35;
-    };
-    struct {
         IData/*31:0*/ __Vdlyvval__soc_top_with_cache__DOT__vpu__DOT__exec_unit_inst__DOT__systolic_inst__DOT__pe__v35;
         IData/*31:0*/ __Vdlyvlsb__soc_top_with_cache__DOT__vpu__DOT__exec_unit_inst__DOT__systolic_inst__DOT__pe__v36;
         IData/*31:0*/ __Vdlyvlsb__soc_top_with_cache__DOT__vpu__DOT__exec_unit_inst__DOT__systolic_inst__DOT__pe__v37;
@@ -908,7 +916,7 @@ VL_MODULE(Vsoc_top_with_cache___024root) {
         VlUnpacked<CData/*4:0*/, 1> soc_top_with_cache__DOT__cpu__DOT__register_file_wrapper_i__DOT____Vcellinp__register_file_i__waddr_i;
         VlUnpacked<IData/*31:0*/, 2> soc_top_with_cache__DOT__cpu__DOT__register_file_wrapper_i__DOT____Vcellout__register_file_i__rdata_o;
         VlUnpacked<CData/*4:0*/, 2> soc_top_with_cache__DOT__cpu__DOT__register_file_wrapper_i__DOT____Vcellinp__register_file_i__raddr_i;
-        VlUnpacked<CData/*0:0*/, 6> __Vm_traceActivity;
+        VlUnpacked<CData/*0:0*/, 5> __Vm_traceActivity;
     };
 
     // INTERNAL VARIABLES
