@@ -1,77 +1,106 @@
-`timescale 1ns/1ps
+// soc_top.sv - SoC Top with Simple Cache Integration
+// Integrates CV32E40X core with instruction and data caches
 
-module soc_top_with_cache (
+module soc_top_with_cache #(
+    parameter int MEM_SIZE = 8192,        // 32KB main memory
+    parameter int ICACHE_SIZE = 2048,     // 2KB instruction cache
+    parameter int DCACHE_SIZE = 2048,     // 2KB data cache
+    parameter int CACHE_LINE_SIZE = 16    // 16-byte cache lines
+)(
     input logic clk_i,
     input logic rst_ni
 );
     import cv32e40x_pkg::*;
     import cv32e40x_xif_pkg::*;
+
+    // =========================================================================
+    // Main Memory
+    // =========================================================================
+    logic [31:0] main_memory[MEM_SIZE-1:0];
     
-    // Memory configuration
-    localparam MEM_SIZE = 8192;  // 8KB main memory (words)
-    localparam MEM_ADDR_WIDTH = $clog2(MEM_SIZE);
-    
-    // Internal signals
-    logic instr_req, instr_gnt, instr_rvalid;
-    logic [31:0] instr_addr, instr_rdata;
-    logic data_req, data_gnt, data_rvalid, data_we;
-    logic [3:0] data_be;
-    logic [31:0] data_addr, data_wdata, data_rdata;
-    
-    // Main memory
-    logic [31:0] main_memory [0:MEM_SIZE-1];
-    
-    // X-Interface
-    cv32e40x_if_xif #(.X_ID_WIDTH(4)) xif();    
-    // Memory initialization
     initial begin
-        string mem_file;
-        int i;
-        
-        // Initialize memory to zero
-        for (i = 0; i < MEM_SIZE; i++) begin
-            main_memory[i] = 32'h0;
-        end
-        
-        // Load memory from file
-        if ($value$plusargs("MEMORY_FILE=%s", mem_file)) begin
-            $readmemh(mem_file, main_memory);
-            $display("Loaded memory from: %s", mem_file);
-    	end
-	else begin
-            $readmemh("memory_words.hex", main_memory);
-            $display("Loading memory from: memory_words.hex");
-        end
-        
-        $display("=== Memory Initialization ===");
-        $display("First 10 instructions:");
-        for (i = 0; i < 10; i++) begin
-            $display("  [0x%08x]: 0x%08x", i*4, main_memory[i]);
-        end
-        $display("=============================");
+        $readmemh("memory_words.hex", main_memory);
     end
+
+    // =========================================================================
+    // CPU Interface Signals (OBI)
+    // =========================================================================
+    // Instruction interface
+    logic        instr_req;
+    logic        instr_gnt;
+    logic        instr_rvalid;
+    logic [31:0] instr_addr;
+    logic [31:0] instr_rdata;
     
-    // CPU instance with all required signals
+    // Data interface
+    logic        data_req;
+    logic        data_gnt;
+    logic        data_rvalid;
+    logic        data_we;
+    logic [3:0]  data_be;
+    logic [31:0] data_addr;
+    logic [31:0] data_wdata;
+    logic [31:0] data_rdata;
+
+    // =========================================================================
+    // Cache to Memory Interface Signals
+    // =========================================================================
+    // Instruction cache to memory
+    logic        icache_mem_req;
+    logic        icache_mem_gnt;
+    logic        icache_mem_rvalid;
+    logic        icache_mem_we;
+    logic [3:0]  icache_mem_be;
+    logic [31:0] icache_mem_addr;
+    logic [31:0] icache_mem_wdata;
+    logic [31:0] icache_mem_rdata;
+    
+    // Data cache to memory
+    logic        dcache_mem_req;
+    logic        dcache_mem_gnt;
+    logic        dcache_mem_rvalid;
+    logic        dcache_mem_we;
+    logic [3:0]  dcache_mem_be;
+    logic [31:0] dcache_mem_addr;
+    logic [31:0] dcache_mem_wdata;
+    logic [31:0] dcache_mem_rdata;
+    
+    // VPU memory interface (direct to memory for now)
+    logic        vpu_mem_req;
+    logic        vpu_mem_gnt;
+    logic        vpu_mem_rvalid;
+    logic        vpu_mem_we;
+    logic [3:0]  vpu_mem_be;
+    logic [31:0] vpu_mem_addr;
+    logic [31:0] vpu_mem_wdata;
+    logic [31:0] vpu_mem_rdata;
+
+    // =========================================================================
+    // X-Interface for Vector Coprocessor
+    // =========================================================================
+    cv32e40x_if_xif #(
+        .X_ID_WIDTH(4)
+    ) xif ();
+
+    // =========================================================================
+    // CPU Core Instance
+    // =========================================================================
     cv32e40x_core #(
         .X_EXT(1),
-        .X_ID_WIDTH(4),
-        .X_NUM_RS(2),
-        .LIB(0)  // Add LIB parameter
-    ) cpu (
+        .X_ID_WIDTH(4)
+    ) cpu_inst (
         .clk_i(clk_i),
         .rst_ni(rst_ni),
-        .scan_cg_en_i(1'b0),
         
         // Boot and configuration
-        .boot_addr_i(32'h00000000),
-        .dm_exception_addr_i(32'h00000000),
-        .dm_halt_addr_i(32'h00000000),
-        .mhartid_i(32'h00000000),
-        .mimpid_patch_i(4'h0),
-        .mtvec_addr_i(32'h00000000),
-        
-        // CRITICAL: Enable instruction fetching
         .fetch_enable_i(1'b1),
+        .scan_cg_en_i(1'b0),
+        .boot_addr_i(32'h0),
+        .dm_exception_addr_i(32'h0),
+        .dm_halt_addr_i(32'h0),
+        .mhartid_i(32'h0),
+        .mimpid_patch_i(32'h0),
+        .mtvec_addr_i(32'h0),
         
         // Time and interrupts
         .time_i(64'h0),
@@ -82,30 +111,30 @@ module soc_top_with_cache (
         .clic_irq_priv_i('0),
         .clic_irq_shv_i(1'b0),
         
-        // Instruction interface
+        // Instruction interface (to cache)
         .instr_req_o(instr_req),
         .instr_gnt_i(instr_gnt),
-        .instr_rvalid_i(instr_rvalid),
         .instr_addr_o(instr_addr),
         .instr_memtype_o(),
         .instr_prot_o(),
         .instr_dbg_o(),
         .instr_rdata_i(instr_rdata),
+        .instr_rvalid_i(instr_rvalid),
         .instr_err_i(1'b0),
         
-        // Data interface
+        // Data interface (to cache)
         .data_req_o(data_req),
         .data_gnt_i(data_gnt),
-        .data_rvalid_i(data_rvalid),
         .data_we_o(data_we),
         .data_be_o(data_be),
         .data_addr_o(data_addr),
+        .data_wdata_o(data_wdata),
         .data_memtype_o(),
         .data_prot_o(),
         .data_dbg_o(),
         .data_atop_o(),
-        .data_wdata_o(data_wdata),
         .data_rdata_i(data_rdata),
+        .data_rvalid_i(data_rvalid),
         .data_err_i(1'b0),
         .data_exokay_i(1'b1),
         
@@ -124,10 +153,79 @@ module soc_top_with_cache (
         .core_sleep_o(),
         .wu_wfe_i(1'b0)
     );
-    
-    // Real Vector Coprocessor Instance
-    logic vpu_mem_valid, vpu_mem_ready;
-    x_mem_req_t vpu_mem_req;
+
+    // =========================================================================
+    // Instruction Cache Instance
+    // =========================================================================
+    simple_cache #(
+        .CACHE_SIZE(ICACHE_SIZE),
+        .LINE_SIZE(CACHE_LINE_SIZE),
+        .ADDR_WIDTH(32),
+        .DATA_WIDTH(32)
+    ) icache (
+        .clk_i(clk_i),
+        .rst_ni(rst_ni),
+        
+        // CPU side
+        .cpu_req_i(instr_req),
+        .cpu_gnt_o(instr_gnt),
+        .cpu_we_i(1'b0),           // Instructions are read-only
+        .cpu_be_i(4'hF),
+        .cpu_addr_i(instr_addr),
+        .cpu_wdata_i('0),
+        .cpu_rdata_o(instr_rdata),
+        .cpu_rvalid_o(instr_rvalid),
+        
+        // Memory side
+        .mem_req_o(icache_mem_req),
+        .mem_gnt_i(icache_mem_gnt),
+        .mem_we_o(icache_mem_we),
+        .mem_be_o(icache_mem_be),
+        .mem_addr_o(icache_mem_addr),
+        .mem_wdata_o(icache_mem_wdata),
+        .mem_rdata_i(icache_mem_rdata),
+        .mem_rvalid_i(icache_mem_rvalid)
+    );
+
+    // =========================================================================
+    // Data Cache Instance
+    // =========================================================================
+    simple_cache #(
+        .CACHE_SIZE(DCACHE_SIZE),
+        .LINE_SIZE(CACHE_LINE_SIZE),
+        .ADDR_WIDTH(32),
+        .DATA_WIDTH(32)
+    ) dcache (
+        .clk_i(clk_i),
+        .rst_ni(rst_ni),
+        
+        // CPU side
+        .cpu_req_i(data_req),
+        .cpu_gnt_o(data_gnt),
+        .cpu_we_i(data_we),
+        .cpu_be_i(data_be),
+        .cpu_addr_i(data_addr),
+        .cpu_wdata_i(data_wdata),
+        .cpu_rdata_o(data_rdata),
+        .cpu_rvalid_o(data_rvalid),
+        
+        // Memory side
+        .mem_req_o(dcache_mem_req),
+        .mem_gnt_i(dcache_mem_gnt),
+        .mem_we_o(dcache_mem_we),
+        .mem_be_o(dcache_mem_be),
+        .mem_addr_o(dcache_mem_addr),
+        .mem_wdata_o(dcache_mem_wdata),
+        .mem_rdata_i(dcache_mem_rdata),
+        .mem_rvalid_i(dcache_mem_rvalid)
+    );
+
+    // =========================================================================
+    // Vector Coprocessor Instance
+    // =========================================================================
+    logic vpu_mem_valid;
+    logic vpu_mem_ready;
+    x_mem_req_t vpu_mem_req_struct;
     logic vpu_mem_result_valid;
     x_mem_result_t vpu_mem_result;
     
@@ -155,180 +253,181 @@ module soc_top_with_cache (
         // Memory interface
         .xif_mem_valid_o(vpu_mem_valid),
         .xif_mem_ready_i(vpu_mem_ready),
-        .xif_mem_req_o(vpu_mem_req),
+        .xif_mem_req_o(vpu_mem_req_struct),
         .xif_mem_resp_i('0),
         .xif_mem_result_valid_i(vpu_mem_result_valid),
         .xif_mem_result_i(vpu_mem_result)
     );
     
-    // Handle VPU memory requests
+    // Convert VPU memory interface to OBI-like signals
+    assign vpu_mem_req   = vpu_mem_valid;
+    assign vpu_mem_we    = vpu_mem_req_struct.we;
+    assign vpu_mem_be    = vpu_mem_req_struct.be;
+    assign vpu_mem_addr  = vpu_mem_req_struct.addr;
+    assign vpu_mem_wdata = vpu_mem_req_struct.wdata;
+    assign vpu_mem_ready = vpu_mem_gnt; // Grant immediately for now
+
+    // =========================================================================
+    // Memory Controller / Arbiter
+    // =========================================================================
+    // Priority: ICache > DCache > VPU
+    // Simple round-robin or fixed priority arbiter
+    
+    typedef enum logic [1:0] {
+        MEM_IDLE,
+        MEM_ICACHE,
+        MEM_DCACHE,
+        MEM_VPU
+    } mem_state_t;
+    
+    mem_state_t mem_state, mem_next_state;
+    
+    // State machine
     always_ff @(posedge clk_i or negedge rst_ni) begin
         if (!rst_ni) begin
-            vpu_mem_ready <= 1'b0;
-            vpu_mem_result_valid <= 1'b0;
-            vpu_mem_result <= '0;
+            mem_state <= MEM_IDLE;
         end else begin
-            vpu_mem_ready <= 1'b1;
+            mem_state <= mem_next_state;
+        end
+    end
+    
+    // Next state logic with priority
+    always_comb begin
+        mem_next_state = mem_state;
+        
+        case (mem_state)
+            MEM_IDLE: begin
+                if (icache_mem_req)
+                    mem_next_state = MEM_ICACHE;
+                else if (dcache_mem_req)
+                    mem_next_state = MEM_DCACHE;
+                else if (vpu_mem_req)
+                    mem_next_state = MEM_VPU;
+            end
             
-            if (vpu_mem_valid && vpu_mem_ready) begin
-                vpu_mem_result_valid <= 1'b1;
-                vpu_mem_result.id <= vpu_mem_req.id;
-                vpu_mem_result.err <= 1'b0;
-                
-                if (vpu_mem_req.we) begin
-                    // Write to memory
-                    if ((vpu_mem_req.addr >> 2) < MEM_SIZE) begin
-                        for (int i = 0; i < 32; i++) begin
-                            if (vpu_mem_req.be[i]) begin
-                                main_memory[(vpu_mem_req.addr >> 2) + (i >> 2)][(i%4)*8 +: 8] 
-                                    <= vpu_mem_req.wdata[i*8 +: 8];
-                            end
-                        end
-                    end
-                    vpu_mem_result.rdata <= '0;
-                end else begin
-                    // Read from memory
-                    for (int i = 0; i < 8; i++) begin
-                        if ((vpu_mem_req.addr >> 2) + i < MEM_SIZE) begin
-                            vpu_mem_result.rdata[i*32 +: 32] <= main_memory[(vpu_mem_req.addr >> 2) + i];
-                        end else begin
-                            vpu_mem_result.rdata[i*32 +: 32] <= '0;
-                        end
-                    end
-                end
-            end else begin
-                vpu_mem_result_valid <= 1'b0;
+            MEM_ICACHE: begin
+                if (!icache_mem_req)
+                    mem_next_state = MEM_IDLE;
+            end
+            
+            MEM_DCACHE: begin
+                if (!dcache_mem_req)
+                    mem_next_state = MEM_IDLE;
+            end
+            
+            MEM_VPU: begin
+                if (!vpu_mem_req)
+                    mem_next_state = MEM_IDLE;
+            end
+        endcase
+    end
+    
+    // Grant signals
+    assign icache_mem_gnt = (mem_state == MEM_IDLE && icache_mem_req) || (mem_state == MEM_ICACHE);
+    assign dcache_mem_gnt = (mem_state == MEM_IDLE && dcache_mem_req && !icache_mem_req) || (mem_state == MEM_DCACHE);
+    assign vpu_mem_gnt    = (mem_state == MEM_IDLE && vpu_mem_req && !icache_mem_req && !dcache_mem_req) || (mem_state == MEM_VPU);
+    
+    // Memory access logic
+    logic        mem_access_valid;
+    logic [31:0] mem_access_addr;
+    logic        mem_access_we;
+    logic [3:0]  mem_access_be;
+    logic [31:0] mem_access_wdata;
+    logic [31:0] mem_access_rdata;
+    logic        mem_access_rvalid_next;
+    logic        mem_access_rvalid;
+    
+    always_comb begin
+        mem_access_valid = 1'b0;
+        mem_access_addr  = '0;
+        mem_access_we    = 1'b0;
+        mem_access_be    = 4'hF;
+        mem_access_wdata = '0;
+        
+        case (mem_state)
+            MEM_ICACHE: begin
+                mem_access_valid = icache_mem_req && icache_mem_gnt;
+                mem_access_addr  = icache_mem_addr;
+                mem_access_we    = icache_mem_we;
+                mem_access_be    = icache_mem_be;
+                mem_access_wdata = icache_mem_wdata;
+            end
+            
+            MEM_DCACHE: begin
+                mem_access_valid = dcache_mem_req && dcache_mem_gnt;
+                mem_access_addr  = dcache_mem_addr;
+                mem_access_we    = dcache_mem_we;
+                mem_access_be    = dcache_mem_be;
+                mem_access_wdata = dcache_mem_wdata;
+            end
+            
+            MEM_VPU: begin
+                mem_access_valid = vpu_mem_req && vpu_mem_gnt;
+                mem_access_addr  = vpu_mem_addr;
+                mem_access_we    = vpu_mem_we;
+                mem_access_be    = vpu_mem_be;
+                mem_access_wdata = vpu_mem_wdata;
+            end
+        endcase
+    end
+    
+    // Memory read/write
+    always_ff @(posedge clk_i or negedge rst_ni) begin
+        if (!rst_ni) begin
+            mem_access_rvalid <= 1'b0;
+            mem_access_rdata  <= '0;
+        end else begin
+            mem_access_rvalid <= mem_access_rvalid_next;
+            
+            if (mem_access_valid && !mem_access_we) begin
+                // Read
+                mem_access_rdata <= main_memory[mem_access_addr[31:2]];
+            end else if (mem_access_valid && mem_access_we) begin
+                // Write with byte enables
+                if (mem_access_be[0]) main_memory[mem_access_addr[31:2]][7:0]   <= mem_access_wdata[7:0];
+                if (mem_access_be[1]) main_memory[mem_access_addr[31:2]][15:8]  <= mem_access_wdata[15:8];
+                if (mem_access_be[2]) main_memory[mem_access_addr[31:2]][23:16] <= mem_access_wdata[23:16];
+                if (mem_access_be[3]) main_memory[mem_access_addr[31:2]][31:24] <= mem_access_wdata[31:24];
             end
         end
     end
     
+    assign mem_access_rvalid_next = mem_access_valid;
+    
+    // Route rvalid and rdata back to requesters
+    assign icache_mem_rvalid = (mem_state == MEM_ICACHE) && mem_access_rvalid;
+    assign dcache_mem_rvalid = (mem_state == MEM_DCACHE) && mem_access_rvalid;
+    assign vpu_mem_rvalid    = (mem_state == MEM_VPU) && mem_access_rvalid;
+    
+    assign icache_mem_rdata = mem_access_rdata;
+    assign dcache_mem_rdata = mem_access_rdata;
+    assign vpu_mem_rdata    = mem_access_rdata;
+    
+    // VPU result interface
+    assign vpu_mem_result_valid = vpu_mem_rvalid;
+    assign vpu_mem_result.id    = '0;  // ID is handled by VPU
+    assign vpu_mem_result.rdata = vpu_mem_rdata;
+    assign vpu_mem_result.err   = 1'b0;
+    assign vpu_mem_result.dbg   = 1'b0;
+
     // =========================================================================
-    // DIRECT INSTRUCTION MEMORY (NO CACHE) - PROVEN TO WORK
+    // Simulation Support
     // =========================================================================
-    always_ff @(posedge clk_i or negedge rst_ni) begin
-        if (!rst_ni) begin
-            instr_gnt <= 1'b0;
-            instr_rvalid <= 1'b0;
-            instr_rdata <= '0;
-        end else begin
-            // Simple direct memory access for instructions
-            instr_gnt <= instr_req;
-            instr_rvalid <= instr_gnt;
-            
-            if (instr_req) begin
-                if ((instr_addr >> 2) < MEM_SIZE) begin
-                    instr_rdata <= main_memory[instr_addr >> 2];
-                end else begin
-                    instr_rdata <= 32'h0;
-                end
-            end
+    `ifdef SIMULATION
+    // Waveform dumping
+    initial begin
+        if ($test$plusargs("trace")) begin
+            $dumpfile("simulation.vcd");
+            $dumpvars(0, soc_top);
         end
     end
     
-    // =========================================================================
-    // SIMPLE DATA MEMORY (can add cache later)
-    // =========================================================================
-    always_ff @(posedge clk_i or negedge rst_ni) begin
-        if (!rst_ni) begin
-            data_gnt <= 1'b0;
-            data_rvalid <= 1'b0;
-            data_rdata <= '0;
-        end else begin
-            // Simple direct memory access for data
-            data_gnt <= data_req;
-            data_rvalid <= data_gnt;
-            
-            if (data_req) begin
-                if (data_we) begin
-                    // Write
-                    if ((data_addr >> 2) < MEM_SIZE) begin
-                        for (int i = 0; i < 4; i++) begin
-                            if (data_be[i]) begin
-                                main_memory[data_addr >> 2][i*8 +: 8] <= data_wdata[i*8 +: 8];
-                            end
-                        end
-                    end
-                    data_rdata <= 32'h0;
-                end else begin
-                    // Read
-                    if ((data_addr >> 2) < MEM_SIZE) begin
-                        data_rdata <= main_memory[data_addr >> 2];
-                    end else begin
-                        data_rdata <= 32'h0;
-                    end
-                end
-            end
-        end
+    // Simulation timeout
+    initial begin
+        #1000000;
+        $display("Simulation timeout!");
+        $finish;
     end
-    
-    // =========================================================================
-    // Performance Monitoring
-    // =========================================================================
-    logic [31:0] cycle_count;
-    logic [31:0] instructions_executed;
-    logic [31:0] prev_pc;
-    logic [7:0] pc_stuck_counter;
-    logic program_done;
-    
-    // Check for completion
-    assign program_done = (main_memory[32'h1000 >> 2] === 32'h00000001);
-    
-    always_ff @(posedge clk_i or negedge rst_ni) begin
-        if (!rst_ni) begin
-            cycle_count <= '0;
-            instructions_executed <= '0;
-            prev_pc <= '0;
-            pc_stuck_counter <= '0;
-        end else begin
-            cycle_count <= cycle_count + 1;
-            
-            // Debug output for first cycles
-            if (cycle_count < 20) begin
-                $display("Cycle %d: PC=0x%08x, instr_req=%b, instr_gnt=%b, instr_rvalid=%b, instr=0x%08x",
-                         cycle_count, instr_addr, instr_req, instr_gnt, instr_rvalid, instr_rdata);
-            end
-            
-            // Count executed instructions
-            if (instr_rvalid) begin
-                instructions_executed <= instructions_executed + 1;
-            end
-            
-            // Check for program completion
-            if (program_done) begin
-                $display("\n=== PROGRAM COMPLETED SUCCESSFULLY ===");
-                $display("Total cycles: %0d", cycle_count);
-                $display("Instructions executed: %0d", instructions_executed);
-                $display("===========================\n");
-                $finish;
-            end
-            
-            // Detect infinite loop
-            if (instr_req) begin
-                if (instr_addr == prev_pc) begin
-                    pc_stuck_counter <= pc_stuck_counter + 1;
-                    if (pc_stuck_counter > 100) begin
-                        $display("\n=== INFINITE LOOP DETECTED ===");
-                        $display("Stuck at PC: 0x%08x", instr_addr);
-                        $display("Total cycles: %0d", cycle_count);
-                        $display("Instructions executed: %0d", instructions_executed);
-                        $display("Memory[0x1000]: 0x%08x", main_memory[32'h1000 >> 2]);
-                        $display("===========================\n");
-                        $finish;
-                    end
-                end else begin
-                    prev_pc <= instr_addr;
-                    pc_stuck_counter <= '0;
-                end
-            end
-            
-            // Timeout
-            if (cycle_count > 100000) begin
-                $display("Simulation timeout at cycle %0d", cycle_count);
-                $display("Checking memory[0x1000]: 0x%08x", main_memory[32'h1000 >> 2]);
-                $display("PC: 0x%08x", instr_addr);
-                $finish;
-            end
-        end
-    end
-    
+    `endif
+
 endmodule

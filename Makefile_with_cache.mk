@@ -101,7 +101,7 @@ CV32E40X_BHV = $(VENDOR_DIR)/bhv/cv32e40x_sim_clock_gate.sv
 
 # Cache RTL files from UltraEmbedded
 CACHE_RTL = \
-	$(CACHE_DIR)/icache.v \
+	$(CACHE_DIR)/simple_cache.sv \
 	$(CACHE_DIR)/icache_data_ram.v \
 	$(CACHE_DIR)/icache_tag_ram.v \
 	$(CACHE_DIR)/dcache_core.v \
