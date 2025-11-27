@@ -1,0 +1,24 @@
+
+============================================================
+VMAC Performance Analysis Report
+============================================================
+
+Configuration:
+  Vector Length: 8
+  Iterations:    10
+  Total Ops:     80
+
+Raw Cycles:
+  CPU (Basic):      0
+  CPU (Unrolled):   0
+  Vector Unit:      0
+
+Speedup:
+  vs CPU (Basic):    1.00x
+  vs CPU (Unrolled): 1.00x
+
+Efficiency (Cycles per Element):
+  CPU (Basic):       0.01
+  CPU (Unrolled):    0.01
+  Vector Unit:       0.01
+============================================================

@@ -1,0 +1,10 @@
+[VCoP] ACCEPT id=0 f7=0x00 rd=v1 rs1=v10 rs2=v0
+
+ERROR: Simulation reached maximum time limit!
+
+=== VMAC PERFORMANCE RESULTS ===
+Verification: FAIL
+Memory Check (Canary): 0x0
+CPU (Basic): 0 cycles
+CPU (Unrolled): 0 cycles
+Vector Coprocessor: 0 cycles

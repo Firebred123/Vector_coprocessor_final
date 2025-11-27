@@ -17,7 +17,8 @@ _start:
     # Load vector B into v2
     mv a0, s1
     .word ((FUNCT7_VLD << 25) | (0 << 20) | (A0 << 15) | (0 << 12) | (V2 << 7) | OPCODE_CUSTOM0)
-
+    
+    # Load vector C into v3
     mv a0, s2
     .word ((FUNCT7_VLD << 25) | (0 << 20) | (A0 << 15) | (0 << 12) | (V3 << 7) | OPCODE_CUSTOM0)
 
@@ -29,10 +30,10 @@ _start:
     mv a0, s2
     .word ((FUNCT7_VST << 25) | (V3 << 20) | (A0 << 15) | (0 << 12) | (0 << 7) | OPCODE_CUSTOM0)
     
-    # Signal completion
+    # Signal completion - FIXED: Write to 0x1000 instead of using s2
     li t0, 1
-    lui t1, 0x1
-    sw t0, 0(t1)
+    lui t1, 0x1        # t1 = 0x1000 (1 << 12)
+    sw t0, 0(t1)       # Store 1 at address 0x1000
 
 hang:
     j hang
@@ -43,7 +44,7 @@ vector_a:
 
 .org 0x140
 vector_b:
-    .word 10, 10, 10, 10, 10, 10, 10, 10
+    .word 10, 20, 30, 40, 50, 60, 70, 80
 
 .org 0x180
 vector_c:
