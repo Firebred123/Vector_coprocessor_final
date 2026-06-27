@@ -16,11 +16,15 @@ The directory structure is organized as follows:
 * **`sim/`**: Verification and simulation environments.
   * **`sim/tests/`**: Assembly test cases (`vmac_test.s`, `matmul_test.s`, etc.), C test applications, linker scripts, and the regression test runner [run_tests.sh](file:///Users/vs/function/coprocessor/sim/tests/run_tests.sh).
   * **`sim/tb/`**: C++ testbench files utilized by Verilator to drive clocks, reset, and memory initialization.
+  * **`sim/comparison/`**: Performance test files ([vmac_performance_test.c](file:///Users/vs/function/coprocessor/sim/comparison/vmac_performance_test.c), [vmac_performance_test.s](file:///Users/vs/function/coprocessor/sim/comparison/vmac_performance_test.s)) and Makefiles comparing CPU vs Vector Coprocessor performance.
   * **`sim/soc_top_with_cache.sv`**: SoC top module instantiating the CPU core, VCoP, ICache, DCache, and the bus arbiter.
+  * **Simulation configs**: Contains compilation helper shell scripts ([compile_verilator.sh](file:///Users/vs/function/coprocessor/sim/compile_verilator.sh), [run_simulation.sh](file:///Users/vs/function/coprocessor/sim/run_simulation.sh)) and auxiliary Makefiles ([test_all.mk](file:///Users/vs/function/coprocessor/sim/test_all.mk), [test_all_inline.mk](file:///Users/vs/function/coprocessor/sim/test_all_inline.mk)).
+* **`scripts/`**: Python utility scripts (e.g. [instruction_encoder.py](file:///Users/vs/function/coprocessor/scripts/instruction_encoder.py), [vmac_analysis.py](file:///Users/vs/function/coprocessor/scripts/vmac_analysis.py), [vmac_vcd_parser.py](file:///Users/vs/function/coprocessor/scripts/vmac_vcd_parser.py)) for parsing simulation outputs, traces, and instruction formatting.
 * **`vendor/`**: Third-party IP libraries. Specifically contains open-source code for OpenHW Group's **CV32E40X RISC-V CPU Core**.
-* **`yosys/`**: Synthesis environment folder containing synthesis scripts for area and gate count estimation.
+* **`yosys/`**: Synthesis environment folder containing synthesis scripts (`size_estimation.ys`, `simple_size_est.ys`, `read_files.ys`) and reports (`size_estimate_report.txt`) for area and gate count estimation.
 * **`skywater-pdk-libs-sky130_fd_sc_hd/`**: Vendored standard cell libraries (SkyWater 130nm) used to map gates during Yosys synthesis.
 * **`ARCHITECTURE.md`**: Comprehensive architectural specification, timing behavior, and programming manual.
+
 
 ---
 

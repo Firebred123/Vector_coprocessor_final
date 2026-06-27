@@ -309,3 +309,6 @@ stats:
 		echo "No statistics available. Run 'make test' first."; \
 	fi
 
+# Include additional comprehensive test targets
+include sim/test_all.mk
+
