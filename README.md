@@ -7,17 +7,20 @@ This repository contains the design, simulation, and verification files for a **
 ## Repository Structure
 
 The directory structure is organized as follows:
-* **`rtl/`**: Register-Transfer Level hardware design code.
-  * **`rtl/core/`**: Main [vector_coprocessor.sv](file:///Users/vs/function/coprocessor/rtl/core/vector_coprocessor.sv) and [vector_reg_file_3port.sv](file:///Users/vs/function/coprocessor/rtl/core/vector_reg_file_3port.sv).
-  * **`rtl/execution/`**: Datapaths for element-wise vector arithmetic ([vector_exec_unit.sv](file:///Users/vs/function/coprocessor/rtl/execution/vector_exec_unit.sv)) and matrix multiplication ([vector_matmul_unit.sv](file:///Users/vs/function/coprocessor/rtl/execution/vector_matmul_unit.sv), [systolic_2x2.sv](file:///Users/vs/function/coprocessor/rtl/execution/systolic_2x2.sv), [vlsu.sv](file:///Users/vs/function/coprocessor/rtl/execution/vlsu.sv)).
-  * **`rtl/cache/`**: Cache controllers ([simple_cache.sv](file:///Users/vs/function/coprocessor/rtl/cache/simple_cache.sv)) and RAM structures.
-  * **`rtl/adapters/`**: OBI-to-cache adapter interfaces.
-* **`include/`**: C/SystemVerilog headers, including [custom_opcodes.vh](file:///Users/vs/function/coprocessor/include/custom_opcodes.vh).
-* **`sim/`**: Verification environment.
-  * **`sim/tests/`**: Assembly tests (`matmul_test.s`, `vmac_test.s`, etc.), test programs, and [run_tests.sh](file:///Users/vs/function/coprocessor/sim/tests/run_tests.sh).
-  * **`sim/soc_top_with_cache.sv`**: System-on-Chip top wrapping the CPU core, caches, bus arbiter, and vector accelerator.
-* **`vendor/`**: OpenHW Group CV32E40X CPU core files.
-* **`ARCHITECTURE.md`**: Detailed hardware specification and programming manual.
+* **`rtl/`**: Register-Transfer Level (RTL) hardware design source code.
+  * **`rtl/core/`**: Main coprocessor controller ([vector_coprocessor.sv](file:///Users/vs/function/coprocessor/rtl/core/vector_coprocessor.sv)) implementing the OpenHW eXtension Interface (X-IF), and the vector register files ([vector_reg_file.sv](file:///Users/vs/function/coprocessor/rtl/core/vector_reg_file.sv) and [vector_reg_file_3port.sv](file:///Users/vs/function/coprocessor/rtl/core/vector_reg_file_3port.sv)) offering 3 read ports and 1 write port.
+  * **`rtl/execution/`**: Datapaths for element-wise vector arithmetic ([vector_exec_unit.sv](file:///Users/vs/function/coprocessor/rtl/execution/vector_exec_unit.sv)), zero-latency vector load-store memory serialization ([vlsu.sv](file:///Users/vs/function/coprocessor/rtl/execution/vlsu.sv)), and matrix multiplication ([vector_matmul_unit.sv](file:///Users/vs/function/coprocessor/rtl/execution/vector_matmul_unit.sv)) driven by a 2×2 skewed processing element grid ([systolic_2x2.sv](file:///Users/vs/function/coprocessor/rtl/execution/systolic_2x2.sv)).
+  * **`rtl/cache/`**: OBI-compliant direct-mapped Cache Controller ([simple_cache.sv](file:///Users/vs/function/coprocessor/rtl/cache/simple_cache.sv)) along with RAM behaviors for Tag and Data array caches.
+  * **`rtl/adapters/`**: Adapters (e.g. [obi_cache_adapter.sv](file:///Users/vs/function/coprocessor/rtl/adapters/obi_cache_adapter.sv)) that bridge custom hardware interfaces to Open Bus Interface (OBI) protocols.
+* **`include/`**: C and SystemVerilog headers, including [custom_opcodes.vh](file:///Users/vs/function/coprocessor/include/custom_opcodes.vh), defining custom R-type instruction encodings, function values, and matrix modes.
+* **`sim/`**: Verification and simulation environments.
+  * **`sim/tests/`**: Assembly test cases (`vmac_test.s`, `matmul_test.s`, etc.), C test applications, linker scripts, and the regression test runner [run_tests.sh](file:///Users/vs/function/coprocessor/sim/tests/run_tests.sh).
+  * **`sim/tb/`**: C++ testbench files utilized by Verilator to drive clocks, reset, and memory initialization.
+  * **`sim/soc_top_with_cache.sv`**: SoC top module instantiating the CPU core, VCoP, ICache, DCache, and the bus arbiter.
+* **`vendor/`**: Third-party IP libraries. Specifically contains open-source code for OpenHW Group's **CV32E40X RISC-V CPU Core**.
+* **`yosys/`**: Synthesis environment folder containing synthesis scripts for area and gate count estimation.
+* **`skywater-pdk-libs-sky130_fd_sc_hd/`**: Vendored standard cell libraries (SkyWater 130nm) used to map gates during Yosys synthesis.
+* **`ARCHITECTURE.md`**: Comprehensive architectural specification, timing behavior, and programming manual.
 
 ---
 
