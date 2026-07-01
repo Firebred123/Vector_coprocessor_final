@@ -4,3 +4,6 @@
 [submodule "vendor/ultraembedded_riscv"]
 	path = vendor/ultraembedded_riscv
 	url = https://github.com/ultraembedded/riscv.git
+[submodule "vendor/cv32e40x"]
+	path = vendor/cv32e40x
+	url = https://github.com/openhwgroup/cv32e40x.git
