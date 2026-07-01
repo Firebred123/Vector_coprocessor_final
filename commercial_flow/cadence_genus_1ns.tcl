@@ -44,7 +44,7 @@ read_hdl -language sv {
 
 # Elaborate the top design module
 elaborate vector_coprocessor
-check_design -unresolved > reports_genus_1ns/check_design_elaboration.rpt
+redirect -to reports_genus_1ns/check_design_elaboration.rpt {check_design -unresolved}
 
 # =========================================================================
 # 3. Apply Constraints
@@ -67,14 +67,14 @@ syn_opt
 # =========================================================================
 # 5. Export Reports and Outputs
 # =========================================================================
-report_area > reports_genus_1ns/area.rpt
-report_timing > reports_genus_1ns/timing.rpt
-report_power > reports_genus_1ns/power.rpt
-report_gates > reports_genus_1ns/gates.rpt
+redirect -to reports_genus_1ns/area.rpt {report_area}
+redirect -to reports_genus_1ns/timing.rpt {report_timing}
+redirect -to reports_genus_1ns/power.rpt {report_power}
+redirect -to reports_genus_1ns/gates.rpt {report_gates}
 
 # Write out the synthesized structural gate-level verilog netlist & updated SDC
-write_hdl > outputs_genus_1ns/vector_coprocessor.synth.v
-write_sdc > outputs_genus_1ns/vector_coprocessor.synth.sdc
+redirect -to outputs_genus_1ns/vector_coprocessor.synth.v {write_hdl}
+redirect -to outputs_genus_1ns/vector_coprocessor.synth.sdc {write_sdc}
 
 echo "=== Synthesis Complete. Netlist saved at: outputs_genus_1ns/vector_coprocessor.synth.v ==="
 exit
