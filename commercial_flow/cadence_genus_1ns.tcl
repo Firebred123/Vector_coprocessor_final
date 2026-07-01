@@ -26,8 +26,11 @@ set_db library [list \
 # =========================================================================
 # 2. Read HDL and Elaborate
 # =========================================================================
+# Force Genus to parse all HDL files as SystemVerilog globally
+set_db hdl_input_language system_verilog
+
 # Read files in SystemVerilog format (minimal VCoP files only)
-read_hdl -sv {
+read_hdl -language sv {
     ./rtl/include/cv32e40x_xif_pkg.sv
     ./rtl/core/vector_reg_file.sv
     ./rtl/core/vector_reg_file_3port.sv
