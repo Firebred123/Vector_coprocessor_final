@@ -20,12 +20,6 @@ set_db init_hdl_search_path [list \
 # Set timing target library (Liberty .lib format)
 set_db library "sky130_fd_sc_hd__tt_025C_1v80.lib"
 
-# =========================================================================
-# 2. Read HDL and Elaborate
-# =========================================================================
-# Force Genus to parse all HDL files as SystemVerilog globally
-set_db hdl_input_language system_verilog
-
 # Read files in SystemVerilog format
 read_hdl -language sv {
     ./vendor/cv32e40x/rtl/include/cv32e40x_pkg.sv
