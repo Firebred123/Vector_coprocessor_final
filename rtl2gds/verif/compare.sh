@@ -13,12 +13,14 @@
 # direction, any run_matrix FAIL line, any file that is empty or lacks the END
 # completion marker, and any in-domain difference.
 #
-# Documented exclusion (reported, never silent): a run whose baseline or
-# candidate END line reports ub_oor>0 exercised the undefined out-of-range
-# load_data write in vlsu.sv (zero-latency memory + stalled first VLD request,
-# see RTL_REVIEW.md F4). Differences in such runs are listed as EXCLUDED-UB and
-# do not fail the gate unless STRICT_UB=1. Runs with ub_oor=0 are always gated,
-# including lat=0 runs.
+# Documented exclusion (reported, never silent): only PRE-EXISTING baseline UB
+# is excusable. A run whose baseline END line reports ub_oor=N>0 exercised the
+# undefined out-of-range load_data write in vlsu.sv (zero-latency memory +
+# stalled first VLD request, see RTL_REVIEW.md S2/F4). If the candidate reports
+# the SAME count N, a difference is listed as EXCLUDED-UB and does not fail
+# (unless STRICT_UB=1). If the candidate's count differs from the baseline's
+# (e.g. the candidate newly enters UB), the run fails as UB-DIVERGENCE even if
+# traces are otherwise equal. Runs with ub_oor=0 in both are always gated.
 set -uo pipefail
 B=${1:?base dir}; C=${2:?candidate dir}; MODE=${3:-cycle}
 case $MODE in cycle) ext=trace;; txn) ext=txn;; *) echo "bad mode $MODE"; exit 2;; esac
@@ -48,8 +50,11 @@ for name in $bl; do
   [ -n "$ubb" ] || { die "$name: base file empty or lacks END marker"; continue; }
   [ -n "$ubc" ] || { die "$name: candidate file empty or lacks END marker"; continue; }
   if cmp -s "$f" "$g"; then same=$((same+1)); continue; fi
-  if { [ "$ubb" -gt 0 ] || [ "$ubc" -gt 0 ]; } && [ "${STRICT_UB:-0}" != 1 ]; then
-    echo "EXCLUDED-UB $name (ub_oor base=$ubb cand=$ubc)"; excl=$((excl+1))
+  if [ "$ubc" -ne "$ubb" ]; then
+    # Candidate newly enters (or leaves) the undefined case: never excusable.
+    echo "UB-DIVERGENCE $name (ub_oor base=$ubb cand=$ubc)"; diff "$f" "$g" | head -6; fail=$((fail+1))
+  elif [ "$ubb" -gt 0 ] && [ "${STRICT_UB:-0}" != 1 ]; then
+    echo "EXCLUDED-UB $name (pre-existing baseline UB, ub_oor=$ubb in both)"; excl=$((excl+1))
   else
     echo "DIFF $name"; diff "$f" "$g" | head -6; fail=$((fail+1))
   fi

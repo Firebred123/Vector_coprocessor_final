@@ -1,4 +1,4 @@
-# eval_candidates 2026-11-04T22:17:02Z repo=18a224b
+# eval_candidates 2026-11-04T22:40:46Z repo=711aa15
 # yosys: Yosys 0.60 (git sha1 5bafeb77dc71e054fa331ab9efa613e6fb0a1c49, clang++ 17.0.0 -fPIC -O3)  verilator: Verilator 5.032 2025-01-01 rev UNKNOWN.REV  icarus: Icarus Verilog version 12.0 (stable) ()
 baseline sim cross-check icarus vs verilator: compare mode=cycle runs=89 identical=72 excluded_ub=17 failing=0
 baseline yosys_asap7_area=5445.367560 flops=4702
@@ -11,21 +11,39 @@ R5L2 mode=txn gate=PASS area=3955.495680 (-27.4%) flops=4712 s1_l1_st0_cycles=22
 R5L1 mode=txn gate=PASS area=3657.903300 (-32.8%) flops=4713 s1_l1_st0_cycles=3107 | verilator: compare mode=txn runs=89 identical=89 excluded_ub=0 failing=0 | icarus: compare mode=txn runs=89 identical=89 excluded_ub=0 failing=0
 R5L4R2 mode=txn gate=PASS area=4281.737760 (-21.4%) flops=4455 s1_l1_st0_cycles=1883 | verilator: compare mode=txn runs=89 identical=89 excluded_ub=0 failing=0 | icarus: compare mode=txn runs=89 identical=89 excluded_ub=0 failing=0
 R5L2R2 mode=txn gate=PASS area=3835.487700 (-29.6%) flops=4456 s1_l1_st0_cycles=2291 | verilator: compare mode=txn runs=89 identical=89 excluded_ub=0 failing=0 | icarus: compare mode=txn runs=89 identical=89 excluded_ub=0 failing=0
-M1_sub_carry SELFTEST-OK (mutant caught) | compare mode=cycle runs=89 identical=22 excluded_ub=24 failing=43
-M2_store_word_swap SELFTEST-OK (mutant caught) | compare mode=cycle runs=89 identical=23 excluded_ub=24 failing=42
-M3_raddr2_unregistered SELFTEST-OK (mutant caught) | compare mode=cycle runs=89 identical=23 excluded_ub=24 failing=42
-M4_vrf_write_v15_lost SELFTEST-OK (mutant caught) | compare mode=cycle runs=89 identical=29 excluded_ub=22 failing=38
+FIXES run_matrix exit V=0 I=0 | e1+hang_test runs with any nonzero err_*/hang: V=0 I=0 | e0 runs hanging (expected, unfixed SoC id): 24 | V vs I: compare mode=cycle runs=89 identical=89 excluded_ub=0 failing=0
+baseline for contrast | e1+hang_test runs with any nonzero err_*/hang: V=98
 base+CG area=4855.621140 (-10.8%) icg=19
 R2+CG area=4748.910120 (-12.8%) icg=18
 R5L4R2+CG area=3737.305980 (-31.4%) icg=19
 R5L2R2+CG area=3269.521260 (-40.0%) icg=19
+M1_sub_carry SELFTEST-OK (mutant caught) | compare mode=cycle runs=89 identical=22 excluded_ub=24 failing=43
+M2_store_word_swap SELFTEST-OK (mutant caught) | compare mode=cycle runs=89 identical=23 excluded_ub=24 failing=42
+M3_raddr2_unregistered SELFTEST-OK (mutant caught) | compare mode=cycle runs=89 identical=23 excluded_ub=24 failing=42
+M4_vrf_write_v15_lost SELFTEST-OK (mutant caught) | compare mode=cycle runs=89 identical=29 excluded_ub=22 failing=38
+# R5 latency / workload cycles (results_latency.py):
+sim_base_v: issue->result cycles (no stalls): ALU=[1] VLD=[8] VST=[8]
+   total cycles over completing runs: l0_e0_st30=18930(8 runs), l0_e1_st0=12270(8 runs), l0_e1_st30=18930(8 runs), l0_e1_st30_b1=14727(8 runs), l1_e0_st30_b1=14727(8 runs), l1_e1_st0=12270(8 runs), l1_e1_st30_b1=14727(8 runs), l1_e1_st50_b1_k20=16320(8 runs)
+sim_R2_v: issue->result cycles (no stalls): ALU=[1] VLD=[8] VST=[8]
+   total cycles over completing runs: l0_e0_st30=18930(8 runs), l0_e1_st0=12270(8 runs), l0_e1_st30=18930(8 runs), l0_e1_st30_b1=14727(8 runs), l1_e0_st30_b1=14727(8 runs), l1_e1_st0=12270(8 runs), l1_e1_st30_b1=14727(8 runs), l1_e1_st50_b1_k20=16320(8 runs)
+sim_R5L4_v: issue->result cycles (no stalls): ALU=[3] VLD=[8] VST=[8]
+   total cycles over completing runs: l0_e0_st30=21611(8 runs), l0_e1_st0=15290(8 runs), l0_e1_st30=21611(8 runs), l0_e1_st30_b1=17408(8 runs), l1_e0_st30_b1=17408(8 runs), l1_e1_st0=15290(8 runs), l1_e1_st30_b1=17408(8 runs), l1_e1_st50_b1_k20=18907(8 runs)
+sim_R5L2_v: issue->result cycles (no stalls): ALU=[5] VLD=[8] VST=[8]
+   total cycles over completing runs: l0_e0_st30=24631(8 runs), l0_e1_st0=18310(8 runs), l0_e1_st30=24631(8 runs), l0_e1_st30_b1=20428(8 runs), l1_e0_st30_b1=20428(8 runs), l1_e1_st0=18310(8 runs), l1_e1_st30_b1=20428(8 runs), l1_e1_st50_b1_k20=21927(8 runs)
+sim_R5L4R2_v: issue->result cycles (no stalls): ALU=[3] VLD=[8] VST=[8]
+   total cycles over completing runs: l0_e0_st30=21611(8 runs), l0_e1_st0=15290(8 runs), l0_e1_st30=21611(8 runs), l0_e1_st30_b1=17408(8 runs), l1_e0_st30_b1=17408(8 runs), l1_e1_st0=15290(8 runs), l1_e1_st30_b1=17408(8 runs), l1_e1_st50_b1_k20=18907(8 runs)
+sim_R5L2R2_v: issue->result cycles (no stalls): ALU=[5] VLD=[8] VST=[8]
+   total cycles over completing runs: l0_e0_st30=24631(8 runs), l0_e1_st0=18310(8 runs), l0_e1_st30=24631(8 runs), l0_e1_st30_b1=20428(8 runs), l1_e0_st30_b1=20428(8 runs), l1_e1_st0=18310(8 runs), l1_e1_st30_b1=20428(8 runs), l1_e1_st50_b1_k20=21927(8 runs)
 # harness negative tests (gate_selftest.sh):
 SELFTEST-OK empty_equal (rejected: compare mode=cycle runs=1 identical=0 excluded_ub=0 failing=1)
 SELFTEST-OK zero_runs (rejected: compare mode=cycle runs=0 identical=0 excluded_ub=0 failing=3)
 SELFTEST-OK missing_run (rejected: compare mode=cycle runs=89 identical=88 excluded_ub=0 failing=2)
 SELFTEST-OK truncated (rejected: compare mode=cycle runs=89 identical=88 excluded_ub=0 failing=1)
 SELFTEST-OK wrong_output (rejected: compare mode=cycle runs=89 identical=88 excluded_ub=0 failing=1)
-SELFTEST-OK sim_fatal_run_matrix (rejected: run_matrix: tool=verilator runs=12 failed=12 out=/tmp/rtlrev/selftest2/sim_fatal)
+SELFTEST-OK new_candidate_ub_diff (rejected: compare mode=cycle runs=89 identical=88 excluded_ub=0 failing=1)
+SELFTEST-OK new_candidate_ub_marker_only (rejected: compare mode=cycle runs=89 identical=88 excluded_ub=0 failing=1)
+SELFTEST-OK baseline_ub_count_diverges (rejected: compare mode=cycle runs=89 identical=88 excluded_ub=0 failing=1)
+SELFTEST-OK sim_fatal_run_matrix (rejected: run_matrix: tool=verilator runs=12 failed=12 out=/Users/vs/function/Vector_coprocessor_final/rtl2gds/verif/out/eval/selftest/sim_fatal)
 SELFTEST-OK sim_fatal_compare (rejected: compare mode=cycle runs=89 identical=0 excluded_ub=0 failing=91)
 SELFTEST-OK build_failure (rejected: BUILD FAILED)
 gate_selftest: failures=0

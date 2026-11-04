@@ -29,6 +29,23 @@ expect_reject truncated "$HERE/compare.sh" "$B" "$W/trunc"
 cp -R "$B" "$W/wrong"; f="$W/wrong/s2_l1_e1_st0.trace"
 awk 'done==0 && / RESULT / {sub(/data=[0-9a-f]+/, "data=deadbeef"); done=1} {print}' "$f" > "$f.new" && mv "$f.new" "$f"
 expect_reject wrong_output "$HERE/compare.sh" "$B" "$W/wrong"
+# 5b. candidate newly enters UB in an in-domain run (base ub_oor=0) and differs
+cp -R "$B" "$W/newub"; f="$W/newub/s2_l1_e1_st0.trace"
+awk 'done==0 && / RESULT / {sub(/data=[0-9a-f]+/, "data=deadbeef"); done=1} {print}' "$f" | sed '$s/^END ub_oor=.*/END ub_oor=3/' > "$f.new" && mv "$f.new" "$f"
+expect_reject new_candidate_ub_diff "$HERE/compare.sh" "$B" "$W/newub"
+# 5c. candidate UB count changes with otherwise identical trace
+cp -R "$B" "$W/newub2"; f="$W/newub2/s2_l1_e1_st0.trace"
+sed '$s/^END ub_oor=.*/END ub_oor=1/' "$f" > "$f.new" && mv "$f.new" "$f"
+expect_reject new_candidate_ub_marker_only "$HERE/compare.sh" "$B" "$W/newub2"
+# 5d. pre-existing UB run whose candidate UB count diverges
+ubrun=$(grep -l '^END ub_oor=[1-9]' "$B"/*.trace | head -1)
+if [ -n "$ubrun" ]; then
+  n=$(basename "$ubrun"); cp -R "$B" "$W/ubdiv"; f="$W/ubdiv/$n"
+  sed '$s/^END ub_oor=.*/END ub_oor=999/' "$f" > "$f.new" && mv "$f.new" "$f"
+  expect_reject baseline_ub_count_diverges "$HERE/compare.sh" "$B" "$W/ubdiv"
+else
+  echo "SELFTEST-FAIL baseline_ub_count_diverges (no UB run in baseline to mutate)"; bad=$((bad+1))
+fi
 # 6. simulator fatal / crash: DUT tree with an elaboration-time $fatal
 t="$W/tree_fatal"; mkdir -p "$t"; cp -R "$REPO/rtl" "$REPO/include" "$t/"
 sed -i.bak 's/^endmodule/  initial begin #50; $fatal(1, "selftest crash"); end\nendmodule/' "$t/rtl/execution/vlsu.sv"

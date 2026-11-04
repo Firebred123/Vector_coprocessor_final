@@ -78,8 +78,9 @@ from `out/*/summary_*.txt`.
 | F7 | L | `rs_valid` is ignored; base address is taken from `rs[0]` at accept. With the pinned cv32e40x, `rs_valid` only reflects illegal register addresses (`cv32e40x_id_stage.sv:733`) and the core stalls on hazards, so this is low risk. | code inspection |
 | F8 | L | VLD/ALU return element 0 as a scalar write to `x[rd]` (`writeback=1`). `mem_req.mode=2'b10` is a reserved privilege encoding (the core is M-mode, 2'b11). | code inspection |
 
-Fixing F1-F5 is a separate non-area change set if the coordinator wants it. None of the
-area candidates touch these paths, and the differential gate checks that they stay the same.
+Proposed fixes for F1-F5 are separate patches (§7). They are not part of the area
+experiment. None of the area candidates touch these paths, and the differential gate checks
+that they stay the same.
 
 ## 3. Area analysis and candidates
 
@@ -144,17 +145,18 @@ Evidence for every row comes from `rtl2gds/verif/eval_candidates.sh` (results in
     non-timing-driven Yosys numbers.
   - Gate: txn mode (identical handshake payloads, memory traffic and final VRF/memory;
     cycles differ by design).
-  - **Recommended for approval by codex-1/user** as a performance-for-area trade:
-    `ALU_LANES=4` (−19%) or `2` (−27%, balanced with the 32 b/cycle memory port); with R2,
-    −21% / −30% (estimates).
+  - **Status (codex-1, m49): OPTIONAL latency/area experiment only** (ALU_LANES=4 or 2).
+    It is not the baseline, not the default, and not the primary cycle-preserving result.
+    Report it as a trade-off. Estimates: −19% / −27%; with R2, −21% / −30%. Latency and
+    workload cycles are in §4.
   - `ALU_LANES=8` keeps 8 lanes but registers operands: +1.6% here, but its purpose
     would be timing relief only.
 - **Flow candidate CG**: clock gating as above (phys-lead).
 
 ## 4. Measured candidate results
 
-Source: `rtl2gds/verif/results/eval_results.txt` (run 2026-11-04T22:17Z on repo `18a224b`; design
-RTL identical to `dbc5fcd`). After this run the only TB change was a header comment. Area
+Source: `rtl2gds/verif/results/eval_results.txt` (run 2026-11-04T22:40Z on repo `711aa15`; design
+RTL identical to `dbc5fcd`; TB and gate as committed with this file). Area
 is the relative Yosys/ABC ASAP7 estimate; the baseline is 5445.37 um2 with 4702 flops.
 "cycles" is the s1_l1_e1_st0 run length (331 instructions). Gate = Verilator AND Icarus,
 89 runs each, against the same simulator's baseline.
@@ -176,6 +178,16 @@ is the relative Yosys/ABC ASAP7 estimate; the baseline is 5445.37 um2 with 4702 
 | R5(4)+R2 + CG | (R5R2 gate) | - | 3737.3 | -31.4% | 4455 + 19 ICG | 1883 |
 | R5(2)+R2 + CG | (R5R2 gate) | - | 3269.5 | -40.0% | 4456 + 19 ICG | 2291 |
 
+R5 latency and workload cost. Source: `results_latency.py` on the Verilator runs. The
+program is a random mix in which about 2/3 of vector ops are ALU ops, which is ALU-heavy;
+real kernels with more loads and stores lose less.
+
+| variant | issue->result, ALU | VLD | VST | total cycles, no-stall runs (8 seeds) | total cycles, SoC-like stall runs |
+|---|---|---|---|---|---|
+| baseline, R1, R2 | 1 | 8 | 8 | 12270 | 14727 |
+| R5 ALU_LANES=4 (±R2) | 3 | 8 | 8 | 15290 (+24.6%) | 17408 (+18.2%) |
+| R5 ALU_LANES=2 (±R2) | 5 | 8 | 8 | 18310 (+49.2%) | 20428 (+38.7%) |
+
 Rejected or not run in the script: R3 +1.9%, R3a +1.8% vs R1R2, R1b exec-only -0.2% (manual runs, §3).
 
 Gate self-tests (same file):
@@ -184,15 +196,18 @@ Gate self-tests (same file):
   - M2: store word order swapped, 42 failing.
   - M3: raddr2 unregistered, 42 failing.
   - M4: writes to v15 lost, 38 failing.
-- Harness negative tests (`gate_selftest.sh`) are all rejected: empty-equal traces,
-  zero runs, missing run, truncated trace, one wrong RESULT word, an injected simulator
-  `$fatal` (both `run_matrix` and `compare`), and a build failure.
+- Harness negative tests (`gate_selftest.sh`): all 11 are rejected. They cover
+  empty-equal traces, zero runs, a missing run, a truncated trace, one wrong RESULT word,
+  candidate-only UB (with a wrong output, and marker-only), a baseline UB count that
+  diverges, an injected simulator `$fatal` (both `run_matrix` and `compare`), and a build
+  failure.
 
 Recommendation for phys-lead and codex-1, in order:
 1. Adopt R2 (safe, cycle-identical).
 2. Run clock gating as a flow candidate.
-3. Decide whether the R5 latency trade is acceptable. If it is, use ALU_LANES=4 (ALU
-   latency 1 -> 3 cycles) or ALU_LANES=2 (1 -> 5 cycles).
+3. Optionally, run R5 as a separate latency/area experiment (ALU_LANES=4: ALU latency
+   1 -> 3 cycles; ALU_LANES=2: 1 -> 5 cycles; workload cost below). It is not the primary
+   cycle-preserving result.
 4. Skip R1.
 
 All numbers must be re-measured in Genus with gsclib045 under the baseline SDC before
@@ -204,10 +219,12 @@ they are reported as results.
 |---|---|
 | `tb_vcop.sv` | Standalone TB for the synthesis top, with an ISA reference model and simulator-independent xorshift stimulus. Covers memory latency 0/1, id echo or SoC-style id=0, random or SoC-arbiter-like ("burst") ready stalls, result back-pressure, issue gaps, commit_kill, non-custom opcodes, and a final VRF dump through VST. Checks X-IF valid/payload stability. Writes a cycle trace and a cycle-free txn trace, each ending with `END ub_oor=N`. |
 | `run_matrix.sh` | Builds on Verilator or Icarus and runs 89 configs (8 seeds x 11 + hang_test). Harness/runtime failures fail the script: build errors, non-zero simulator exit (`$fatal`/crash), missing TBSUMMARY, or a missing END marker. Known baseline ISA mismatches (`err_*`, and `hang=1` from the TB watchdog, which ends the run cleanly) are recorded separately in the summary and gated only differentially. |
-| `compare.sh` | Differential gate (cycle or txn mode). Fails on missing dirs, run-set mismatch, run_matrix FAIL lines, empty or unterminated files, and any in-domain difference. Runs with `ub_oor>0` (S2) are listed as EXCLUDED-UB; STRICT_UB=1 makes them fail. |
+| `compare.sh` | Differential gate (cycle or txn mode); always used with candidate and baseline from the same simulator. Fails on missing dirs, run-set mismatch, run_matrix FAIL lines, empty or unterminated files, and any in-domain difference. Only PRE-EXISTING baseline UB is excusable: a differing run is EXCLUDED-UB only if the baseline has `ub_oor=N>0` and the candidate has the same N. Any change in the UB count (for example a candidate newly entering UB) fails as UB-DIVERGENCE. STRICT_UB=1 also fails the excluded runs. |
 | `area_est.sh` | Relative Yosys/ABC ASAP7 area estimate; `-g` adds library ICG clock gating. |
 | `eval_candidates.sh` | Reproduces §4: applies each patch to a scratch tree, runs both simulators, gates, estimates area (with and without CG), checks that 4 RTL mutants fail, and runs `gate_selftest.sh`. |
-| `gate_selftest.sh` | Harness negative tests. Each must be rejected: empty/zero runs, missing or truncated files, an intentional wrong output, an injected simulator `$fatal`, and a build failure. |
+| `gate_selftest.sh` | Harness negative tests. Each must be rejected: empty/zero runs, missing or truncated files, an intentional wrong output, a candidate-only UB marker (with a wrong output, and marker-only), a baseline UB count that diverges, an injected simulator `$fatal`, and a build failure. |
+| `results_latency.py` | Issue->result latency per instruction class and total workload cycles per config class (used for the R5 trade-off). |
+| `fixes/*.patch` | Separate functional bug-fix proposals (§7). They are not area candidates and not applied. |
 | `candidates/*.patch` | R1, R2, R5. |
 | `results/` | Committed summaries; full traces are regenerated under `out/` (git-ignored). |
 
@@ -252,3 +269,30 @@ Icarus 12 are installed locally).
 Better candidates than C1, in order: flow clock gating (-10.8% est.), C2/R2 (-2.9%), and,
 if the latency trade is approved, R5 with ALU_LANES=4 or 2 (-19% / -27%; with R2+CG,
 -31% / -40%). R5 also removes the multiplier from the 12 ns input->VRF path.
+
+## 7. Proposed functional bug fixes (separate; not area candidates, not applied)
+
+Per codex-1 (m49), these are separate patches in `rtl2gds/verif/fixes/`. They change
+behaviour by design, so they are checked against the TB reference model rather than
+differentially against the baseline.
+
+| patch | fixes | change |
+|---|---|---|
+| `FIX_F1F2F4_vlsu_load_responses.patch` | F1, F2, F4, S2 | vlsu counts load responses separately from requests (`rsp_cnt_q`). It stores each response at its own index and completes on the 8th response. Element 7 is no longer lost, completion no longer depends on `xif_mem_ready_i` (no hang), and the index cannot under- or overflow for any memory latency. +4 flops. |
+| `FIX_F5_reject_unsupported_funct7.patch` | F5 | Only implemented funct7 values (VLD/VST/VADD/VSUB/VMUL/VMAC) are accepted. Other custom-0 encodings get `accept=0`, so the core raises an illegal instruction instead of the coprocessor hanging. |
+| `FIX_F3_soc_echo_mem_result_id.patch` | F3 (SoC harness) | `sim/soc_top_with_cache.sv` returns the VPU request's X-IF id with its memory response instead of tying it to 0. Required together with the vlsu fix, which now waits for matching responses. Without it, a VLD with id != 0 would hang in the SoC instead of silently loading zeros. Lint-clean with Verilator; not simulated, because RISC-V GCC is absent. |
+
+Evidence (from `eval_results.txt`, line FIXES; summary in
+`results/fixes_summary_verilator.txt`):
+- With all three patches, every id-echo run (lat 0/1, random and burst stalls, kills) and
+  `hang_test` has zero reference-model errors and no hang, on both Verilator and Icarus.
+  The baseline has 98 such run-level failures.
+- Icarus and Verilator are now identical on 89/89 runs. The simulator-dependent
+  out-of-range write (S2) is gone.
+- The 24 e0 runs (memory id tied to 0, i.e. the unfixed SoC) hang, as expected.
+
+Not addressed:
+- F6: commit/kill support needs speculative-execution design work.
+- F7, F8: low risk / ISA quirks.
+- S1: the v16..v31 decode policy needs an ISA decision. One option is to reject vector
+  register indices >= 16 at issue.

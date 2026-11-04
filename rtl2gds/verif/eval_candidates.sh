@@ -72,6 +72,18 @@ for c in "${CANDS[@]}"; do
   log "$name mode=$mode gate=$verdict area=$a ($pct) flops=$fl s1_l1_st0_$cyc | verilator: $gv | icarus: $gi"
 done
 
+# Functional bug fixes (separate, NOT area candidates): reference-model check.
+# Expect zero reference-model errors and no hang in every id-echo (e1) run and
+# in hang_test; e0 runs model the unfixed SoC (result id tied to 0) and are
+# expected to hang with the vlsu fix (FIX_F3 fixes the SoC side).
+t=$(mktree FIXES); cp -R "$REPO/sim" "$t/"
+for p in "$HERE"/fixes/*.patch; do (cd "$t" && patch -s -p1 < "$p") || log "FIXES PATCH FAILED $p"; done
+"$HERE/run_matrix.sh" -r "$t" -o "$W/sim_FIXES_v" > /dev/null; rv=$?
+"$HERE/run_matrix.sh" -r "$t" -t icarus -o "$W/sim_FIXES_i" > /dev/null; ri=$?
+fx() { awk -v want="$2" '$1 ~ want {for(i=1;i<=NF;i++) if ($i ~ /^(err_[a-z_]+|hang)=/) {split($i,a,"="); if (a[2]!=0) n++}} END{print n+0}' "$1"; }
+log "FIXES run_matrix exit V=$rv I=$ri | e1+hang_test runs with any nonzero err_*/hang: V=$(fx "$W/sim_FIXES_v/summary_verilator.txt" '_e1_|hang_test') I=$(fx "$W/sim_FIXES_i/summary_icarus.txt" '_e1_|hang_test') | e0 runs hanging (expected, unfixed SoC id): $(grep -c '_e0_.* hang=1 ' "$W/sim_FIXES_v/summary_verilator.txt") | V vs I: $("$HERE/compare.sh" "$W/sim_FIXES_i" "$W/sim_FIXES_v" cycle | tail -1)"
+log "baseline for contrast | e1+hang_test runs with any nonzero err_*/hang: V=$(fx "$W/sim_base_v/summary_verilator.txt" '_e1_|hang_test')"
+
 # Flow-level clock-gating estimate (yosys clockgate with the library ICG) on
 # the baseline and the main RTL candidates. Function is unchanged by CG; its
 # equivalence is a flow/LEC matter, not a simulation one.
@@ -104,6 +116,8 @@ for m in "${MUTS[@]}"; do
     log "$name SELFTEST-OK (mutant caught) | $out"
   fi
 done
+log "# R5 latency / workload cycles (results_latency.py):"
+python3 "$HERE/results_latency.py" "$W/sim_base_v" "$W/sim_R2_v" "$W/sim_R5L4_v" "$W/sim_R5L2_v" "$W/sim_R5L4R2_v" "$W/sim_R5L2R2_v" | tee -a "$RES"
 log "# harness negative tests (gate_selftest.sh):"
 "$HERE/gate_selftest.sh" "$W/sim_base_v" "$W/selftest" | tee -a "$RES"
 log "# done"

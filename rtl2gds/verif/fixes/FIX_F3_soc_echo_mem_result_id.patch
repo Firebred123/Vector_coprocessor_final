@@ -1,0 +1,20 @@
+diff --git a/sim/soc_top_with_cache.sv b/sim/soc_top_with_cache.sv
+index 9f5ada3..dd030e6 100644
+--- a/sim/soc_top_with_cache.sv
++++ b/sim/soc_top_with_cache.sv
+@@ -405,7 +405,14 @@ module soc_top_with_cache #(
+     
+     // VPU result interface
+     assign vpu_mem_result_valid = vpu_mem_rvalid;
+-    assign vpu_mem_result.id    = '0;  // ID is handled by VPU
++    // FIX F3 (rtl-review): echo the X-IF id of the VPU request with its
++    // response (vlsu only accepts responses whose id matches the instruction).
++    logic [3:0] vpu_mem_rid_q;
++    always_ff @(posedge clk_i or negedge rst_ni) begin
++        if (!rst_ni) vpu_mem_rid_q <= '0;
++        else if (mem_access_valid && mem_state == MEM_VPU) vpu_mem_rid_q <= vpu_mem_req_struct.id;
++    end
++    assign vpu_mem_result.id    = vpu_mem_rid_q;
+     assign vpu_mem_result.rdata = vpu_mem_rdata;
+     assign vpu_mem_result.err   = 1'b0;
+     assign vpu_mem_result.dbg   = 1'b0;

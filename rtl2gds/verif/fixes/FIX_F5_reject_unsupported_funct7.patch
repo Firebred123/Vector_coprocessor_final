@@ -1,0 +1,29 @@
+diff --git a/rtl/core/vector_coprocessor.sv b/rtl/core/vector_coprocessor.sv
+index e91b8fc..e9e9fe6 100644
+--- a/rtl/core/vector_coprocessor.sv
++++ b/rtl/core/vector_coprocessor.sv
+@@ -74,8 +74,14 @@ module vector_coprocessor #(
+                        (funct7_in == `FUNCT7_VMUL) || 
+                        (funct7_in == `FUNCT7_VMAC);
+     
++    // FIX F5 (rtl-review): only accept funct7 values that are implemented;
++    // other custom-0 encodings are rejected (illegal instruction in the core)
++    // instead of being accepted and hanging in EXEC_LSU forever.
++    logic is_supported_in;
++    assign is_supported_in = is_custom_in && (is_load_in || is_store_in || is_alu_in);
++
+     logic accept_instr;
+-    assign accept_instr = xif_issue_valid_i && xif_issue_ready_o && is_custom_in;
++    assign accept_instr = xif_issue_valid_i && xif_issue_ready_o && is_supported_in;
+     
+     // ZERO-LATENCY LSU START
+     assign vlsu_start_load = accept_instr && is_load_in;
+@@ -174,7 +180,7 @@ module vector_coprocessor #(
+     
+     always_comb begin
+         xif_issue_resp_o = '0;
+-        if (is_custom_in && (state == IDLE)) begin
++        if (is_supported_in && (state == IDLE)) begin
+             xif_issue_resp_o.accept = 1'b1;
+             xif_issue_resp_o.writeback = !is_store_in;
+             xif_issue_resp_o.loadstore = is_load_in || is_store_in;

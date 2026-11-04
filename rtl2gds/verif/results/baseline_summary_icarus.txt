@@ -86,5 +86,5 @@ s8_l1_e1_st30_b1 OK TBSUMMARY seed=8 lat=1 echo_id=1 stall=30 kill=0 burst=1 iss
 s8_l1_e0_st30_b1 OK TBSUMMARY seed=8 lat=1 echo_id=0 stall=30 kill=0 burst=1 issued=331 results=317 memreq=936 memres=464 cycles=1810 err_result=239 err_resp=0 err_proto=0 err_mem_words=412 hang=0 ub_oor=0 memcks=3e0e96de
 s8_l1_e1_st50_b1_k20 OK TBSUMMARY seed=8 lat=1 echo_id=1 stall=50 kill=20 burst=1 issued=331 results=317 memreq=936 memres=464 cycles=2027 err_result=0 err_resp=0 err_proto=0 err_mem_words=52 hang=0 ub_oor=0 memcks=9d3a64ba
 s8_l0_e1_st30_b1 OK TBSUMMARY seed=8 lat=0 echo_id=1 stall=30 kill=0 burst=1 issued=331 results=317 memreq=936 memres=464 cycles=1810 err_result=244 err_resp=0 err_proto=0 err_mem_words=419 hang=0 ub_oor=18 memcks=606ad2ff
-hang_test OK TBSUMMARY seed=1 lat=1 echo_id=1 stall=30 kill=0 burst=0 issued=1 results=0 memreq=0 memres=0 cycles=320 err_result=0 err_resp=0 err_proto=0 err_mem_words=0 hang=1 ub_oor=0 memcks=1a66f118
+hang_test OK TBSUMMARY seed=1 lat=1 echo_id=1 stall=30 kill=0 burst=0 issued=1 results=0 memreq=0 memres=0 cycles=320 err_result=0 err_resp=1 err_proto=0 err_mem_words=0 hang=1 ub_oor=0 memcks=1a66f118
 run_matrix: tool=icarus runs=89 failed=0 out=/Users/vs/function/Vector_coprocessor_final/rtl2gds/verif/out/eval/sim_base_i

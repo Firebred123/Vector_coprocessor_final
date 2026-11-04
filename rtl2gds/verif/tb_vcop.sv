@@ -67,6 +67,10 @@ module tb_vcop;
     rs[k] = s;
     return s;
   endfunction
+  function automatic bit f7_supported(input logic [6:0] f7);
+    return f7 == `FUNCT7_VLD || f7 == `FUNCT7_VST || f7 == `FUNCT7_VADD ||
+           f7 == `FUNCT7_VSUB || f7 == `FUNCT7_VMUL || f7 == `FUNCT7_VMAC;
+  endfunction
   function automatic logic [31:0] bemask(input logic [3:0] be);
     return {{8{be[3]}}, {8{be[2]}}, {8{be[1]}}, {8{be[0]}}};
   endfunction
@@ -277,7 +281,16 @@ module tb_vcop;
         $fdisplay(ftrace, "%0d ISSUE id=%0d instr=%08x rs0=%08x resp=%b", cyc, issue_req.id,
                   issue_req.instr, p_rs0[pc], issue_resp);
         $fdisplay(ftxn, "ISSUE id=%0d instr=%08x resp=%b", issue_req.id, issue_req.instr, issue_resp);
-        if (issue_req.instr[6:0] == `CUSTOM0_OPCODE) begin
+        if (issue_req.instr[6:0] == `CUSTOM0_OPCODE && !f7_supported(issue_req.instr[31:25])) begin
+          // Unsupported custom-0 funct7: reference behaviour is to reject.
+          // (Baseline accepts and hangs: RTL_REVIEW.md F5.)
+          if (issue_resp.accept) begin
+            err_resp++;
+            $fdisplay(ftrace, "%0d ERR unsupported funct7 accepted", cyc);
+            model_exec(issue_req.instr, p_rs0[pc], issue_req.id);
+          end
+          commit_pend <= 1'b0;
+        end else if (issue_req.instr[6:0] == `CUSTOM0_OPCODE) begin
           if (!issue_resp.accept || issue_resp.writeback != (issue_req.instr[31:25] != `FUNCT7_VST) ||
               issue_resp.loadstore != (issue_req.instr[31:25] == `FUNCT7_VLD || issue_req.instr[31:25] == `FUNCT7_VST)) begin
             err_resp++;
