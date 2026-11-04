@@ -232,3 +232,23 @@ rtl2gds/verif/run_matrix.sh -r CAND_TREE -o OUT_CAND        # candidate tree
 rtl2gds/verif/compare.sh OUT_BASE OUT_CAND cycle            # or txn for R5
 rtl2gds/verif/eval_candidates.sh                             # full reproduction
 ```
+
+## 6. Review of phys-lead candidates C1-C5 (landline m45)
+
+| item | verdict | notes |
+|---|---|---|
+| C1 shared 32-bit product per lane (VMUL/VMAC) + one add/sub `a + (b ^ {32{sub}}) + sub` | **Accept as functionally safe; low value.** | Bit-identical mod 2^32 and cycle-identical; this is R1b in §3. The expected "16 -> 8 multipliers" does not hold: Genus generic already shows 8 multipliers and 8 add/sub (COORDINATOR_REVIEW), and Yosys merges them too. Measured R1b exec-only is -0.2% and fused R1 is -0.6% at the top (noise). Hazards: declare the product as `logic [31:0]` so the multiply is in 32-bit context (fine either way, since only [31:0] is used). Keep default funct7 -> 0, or any value: exec_result is consumed only when is_alu_in, so the top is unaffected and comb LEC holds. Adopt only if Genus mapped datapath reports show a gain. |
+| C2 remove vlsu store_data_q | **Accept** (= R2, cycle-identical over 89 runs x 2 simulators). | No path changes rs2_q or the VRF contents between first_store and the last store beat: (1) `rs2_q` is written only under `accept_instr`, which needs `xif_issue_ready_o = (state==IDLE)`; the top is in EXEC_LSU for the whole store. (2) `vrf_we` is asserted only in IDLE+accept+ALU or EXEC_LSU+vlsu_done+is_load_q, and is_load_q=0 for a store. (3) vlsu STORE_ACTIVE and top EXEC_LSU are entered on the same `accept && is_store_in` edge and left on the same `done_o` edge, and vlsu is always IDLE when the top is IDLE. (4) Word 0 still comes from `store_data_i[31:0]` in the first_store cycle, with raddr2 = instr[24:20], exactly as before. (5) Async reset clears both FSMs together. One residual contract: vlsu now depends on its integrator holding store_data_i stable, which the top guarantees (comment in the patch). Verification: simulation or sequential equivalence; comb LEC cannot map the removed flops. |
+| C3 result_data_q[255:32] | **Accept: verify in the netlist, no RTL edit.** | Unloaded; Yosys prunes them. |
+| C4 VRF v0 constant + out-of-range 16..31 | **Agree, and flag both.** | (a) Yosys did NOT remove v0's 256 async-reset flops (4702 = 4096 + ...). If Genus also keeps them, a tiny RTL candidate is to not allocate storage for v0. Reads are already forced to 0 and writes dropped, so behaviour is identical. Check the Genus flop count first (expected ~4.44k without v0 and without result_data_q[255:32]). (b) The out-of-range hazard is also on WRITES: sim drops a write to v16..v31, while synthesis may truncate the index and alias it onto v0..v15. Please record Genus's elaboration message and make LEC treat it explicitly (S1). |
+| C5 no VRF reset removal / no VLEN/regs reduction | **Agree.** | Both change observable behaviour. |
+
+Top: `vector_coprocessor` is correct. It instantiates only vector_reg_file_3port, vlsu and
+vector_exec_unit, and it is the top of the commercial Genus scripts. The sim/ regressions
+are SoC-level (cv32e40x + caches, `sim/tests/*.s`) and need RISC-V GCC, which is absent.
+No sim/ test targets the standalone top. Use `rtl2gds/verif/` instead (Verilator 5.032 and
+Icarus 12 are installed locally).
+
+Better candidates than C1, in order: flow clock gating (-10.8% est.), C2/R2 (-2.9%), and,
+if the latency trade is approved, R5 with ALU_LANES=4 or 2 (-19% / -27%; with R2+CG,
+-31% / -40%). R5 also removes the multiplier from the 12 ns input->VRF path.
