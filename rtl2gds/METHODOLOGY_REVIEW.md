@@ -182,27 +182,32 @@ The following directives target area recovery without modifying source RTL. Synt
 
 ---
 
-## 7. Read-Only Runtime Diagnosis of Long Synthesis (PID 34703)
+## 7. Runtime Synthesis Diagnosis & Process Ambiguity Root Cause
 
-An independent OS and filesystem inspection was conducted on active Genus PID 34703 executing baseline `vc::synth`:
+An investigation into the prolonged execution of `syn_map` during the baseline run uncovered a critical multi-process listener conflict and shared-memory failure:
 
-### 7.1 Observed OS & Process Evidence
-- **Process State**: PID 34703 (`genus -gui`) is in state `Sl` with 21 active threads (including Mesa `llvmpipe` rendering threads).
-- **CPU Accumulation**: CPU time is monotonically increasing:
-  * 00:02:36 $\rightarrow$ 00:02:47 $\rightarrow$ 00:02:53 $\rightarrow$ 00:03:02 $\rightarrow$ 00:03:16.
-  * Measured rate: ~1.5–2.5 CPU seconds per 10–15 seconds wall time across threads 34703 and worker 34774.
-- **Server Load & Resources**:
-  * 72 logical CPUs (Dual Intel Xeon Gold 6354 @ 3.00 GHz), 528 GB RAM.
-  * Overall system CPU is 74.3% idle, load average 12.62. **Zero host CPU starvation or memory swapping**.
-- **I/O & System Calls**:
-  * `/proc/34703/io`: 585 MB character read/write, 2.67M system calls, 32 KB disk read bytes. Process is not blocked on disk I/O.
-- **License Status**:
-  * Tool log `genus.log2` confirms initial `Genus_Synthesis` license checkout succeeded in 4 seconds. No blocked FlexLM socket calls or license wait queues exist.
-- **GUI Event Loop Interaction**:
-  * The process state `Sl` and wait channel `hrtime` correspond to high-resolution timer sleep intervals between Qt/X11 GUI event loop updates, pumping interface events while running the compute-heavy synthesis engine.
+### 7.1 Process Ambiguity & Double-Reader FIFO Race
+- **Multi-Session Conflict**: Two distinct Genus sessions were executing concurrently from `/home/vaibhav22555/Desktop/rtl2gds`:
+  * Older batch/TUI session: **PID 21628**
+  * Newer GUI session: **PID 34703** (`genus -gui`)
+- **Shared Pipe Race**: Both processes sourced `MCP_setup.tcl` and opened the identical named pipe `/home/vaibhav22555/Desktop/rtl2gds/MCP_genus.command` in non-blocking read-write mode.
+- **Command Misdirection**: When `vc::synth` was dispatched via the FIFO, it was consumed by the older session (PID 21628), rather than the monitored GUI session (PID 34703).
+- **Misleading CPU Accumulation**: The newer session PID 34703 was completely idle regarding synthesis. Its accumulating CPU time (~2–3 CPU seconds per 25s wall time in wait channel `hrtime`) was solely driven by the Qt/X11 Mesa `llvmpipe` software rasterizer and GUI event loop timer heartbeat, not mapping progress.
 
-### 7.2 Diagnostic Verdict
-**Healthy, active computation of technology mapping (`syn_map`) on a 71,148-instance generic netlist.** There is no license hang, deadlock, modal window block, or system CPU throttling. Given 71k generic cells, 3.8k sequential registers, and wide arithmetic logic, technology mapping in single-threaded GUI mode is expected to require 15–30 minutes of runtime.
+### 7.2 Root Failure in Active Synthesis Session (PID 21628)
+- In the active session PID 21628, `syn_generic` completed, producing the generic reports.
+- Upon entering `syn_map`, Genus invoked its super-threading infrastructure, spawning distributed worker processes (`localhost_1_8`, PID 63550, PID 60552).
+- As confirmed by `phys-lead`'s tool log inspection (message `m41`), the super-threading engine encountered **shared memory `shm` failure: `errno 28` (`ENOSPC`: No space left on device)**.
+- Exhaustion of system shared memory segments caused the super-threading worker to hang and the synthesis mapping thread to deadlock.
+
+### 7.3 Methodological Safeguards & Corrective Actions
+1. **Bridge Single-Owner Enforcement**:
+   - The named pipe architecture currently lacks an exclusive process lock. When multiple tool instances run from the same directory, commands are non-deterministically distributed. The bridge must incorporate a single-owner safeguard (e.g. PID validation or file lock) to reject secondary listeners.
+2. **Listener Detachment**:
+   - `phys-lead` must detach the inactive session via `close_fifo` (or terminate the stale process PID 21628) to ensure deterministic dispatch to the intended session.
+3. **Super-Threading Resource Management**:
+   - On heavily shared multi-user server environments where `/dev/shm` can be depleted, distributed super-threading is prone to `errno 28` deadlocks.
+   - Genus should be constrained to local multi-threading without distributed shared-memory dispatch (`set_db max_cpus 1` or explicitly controlled thread pools) to prevent unrecoverable shm deadlocks.
 
 ---
 
@@ -231,7 +236,9 @@ Area optimizations must maintain 100% functional equivalence against the baselin
 | Item | Status | Action Item / Owner |
 | :--- | :---: | :--- |
 | **PDK Collateral** | Verified | GPDK 45nm confirmed with timing, LEFs, and QRC techfile; `phys-lead` |
-| **Synthesis Runtime** | Healthy | PID 34703 actively progressing in `syn_map` (no hang/lock); `phys-lead` |
+| **Synthesis Deadlock**| Root Cause Found | Older PID 21628 consumed FIFO and hung on shm errno 28; PID 34703 was idle GUI; `phys-lead` |
+| **FIFO Single Owner** | Action Required | Detach stale listener with `close_fifo`; root evaluating bridge lock; `phys-lead` |
+| **Super-Threading** | Action Required | Restrict or disable distributed shm super-threading to avoid errno 28; `phys-lead` |
 | **SDC Budget Defect** | Action Required | Resolve $in12 + out12 > 20\text{ ns}$ negative timing window on feedthrough paths; `phys-lead` |
 | **Input Transition** | Action Required | Fix 168 pins missing transition via `set_input_transition`; `phys-lead` |
 | **Reset Network** | Action Required | Set `set_ideal_network [get_ports rst_ni]` during logic synthesis; `phys-lead` |
