@@ -1,0 +1,96 @@
+diff --git a/rtl/execution/vector_exec_unit.sv b/rtl/execution/vector_exec_unit.sv
+index 436f95b..2b070e9 100644
+--- a/rtl/execution/vector_exec_unit.sv
++++ b/rtl/execution/vector_exec_unit.sv
+@@ -27,64 +27,31 @@ module vector_exec_unit #(
+ 
+     localparam int NUM_ELEMENTS = VLEN / ELEMENT_WIDTH;
+     
+-    // SINGLE-CYCLE OPERATIONS
+-    logic [VLEN-1:0] vmac_result, vadd_result, vsub_result, vmul_result;
+-    
+-    // VMAC - SINGLE CYCLE
++    // AREA (rtl-review candidate R1): one fused multiply-add per lane.
++    //   VMUL: a*b + 0        VMAC: a*b + c
++    //   VADD: a*1 + b        VSUB: a*1 + ~b + 1  (= a - b mod 2^32)
++    // All arithmetic is modulo 2^32, so lane results are bit-identical to the
++    // original separate add / sub / two 64-bit-context multipliers. The
++    // default (non-ALU funct7) result is unobservable at the top: exec_result
++    // is consumed only when is_alu_in (vrf_wdata / result_data_q capture).
++    logic is_mul, is_mac, is_add, is_sub;
++    assign is_mac = (funct7_i == `FUNCT7_VMAC);
++    assign is_mul = (funct7_i == `FUNCT7_VMUL);
++    assign is_add = (funct7_i == `FUNCT7_VADD);
++    assign is_sub = (funct7_i == `FUNCT7_VSUB);
++
+     always_comb begin
+         for (int i = 0; i < NUM_ELEMENTS; i++) begin
+-            logic [31:0] a_elem, b_elem, c_elem;
+-            logic [63:0] prod, sum;
+-            
++            logic [31:0] a_elem, b_elem, c_elem, m_op, z_op;
+             a_elem = vec_a_i[i*ELEMENT_WIDTH +: ELEMENT_WIDTH];
+             b_elem = vec_b_i[i*ELEMENT_WIDTH +: ELEMENT_WIDTH];
+             c_elem = vec_c_i[i*ELEMENT_WIDTH +: ELEMENT_WIDTH];
+-            
+-            prod = a_elem * b_elem;
+-            sum = prod + c_elem;
+-            vmac_result[i*ELEMENT_WIDTH +: ELEMENT_WIDTH] = sum[31:0];
+-        end
+-    end
+-    
+-    // VADD - SINGLE CYCLE
+-    always_comb begin
+-        for (int i = 0; i < NUM_ELEMENTS; i++) begin
+-            vadd_result[i*ELEMENT_WIDTH +: ELEMENT_WIDTH] = 
+-                vec_a_i[i*ELEMENT_WIDTH +: ELEMENT_WIDTH] + 
+-                vec_b_i[i*ELEMENT_WIDTH +: ELEMENT_WIDTH];
+-        end
+-    end
+-    
+-    // VSUB - SINGLE CYCLE
+-    always_comb begin
+-        for (int i = 0; i < NUM_ELEMENTS; i++) begin
+-            vsub_result[i*ELEMENT_WIDTH +: ELEMENT_WIDTH] = 
+-                vec_a_i[i*ELEMENT_WIDTH +: ELEMENT_WIDTH] - 
+-                vec_b_i[i*ELEMENT_WIDTH +: ELEMENT_WIDTH];
+-        end
+-    end
+-    
+-    // VMUL - SINGLE CYCLE
+-    always_comb begin
+-        for (int i = 0; i < NUM_ELEMENTS; i++) begin
+-            logic [63:0] prod;
+-            prod = vec_a_i[i*ELEMENT_WIDTH +: ELEMENT_WIDTH] * 
+-                   vec_b_i[i*ELEMENT_WIDTH +: ELEMENT_WIDTH];
+-            vmul_result[i*ELEMENT_WIDTH +: ELEMENT_WIDTH] = prod[31:0];
++            m_op = (is_mul || is_mac) ? b_elem : 32'd1;
++            z_op = is_mac ? c_elem : is_add ? b_elem : is_sub ? ~b_elem : 32'd0;
++            result_o[i*ELEMENT_WIDTH +: ELEMENT_WIDTH] = a_elem * m_op + z_op + {31'd0, is_sub};
+         end
+     end
+-    
+-    // Result selection
+-    always_comb begin
+-        case (funct7_i)
+-            `FUNCT7_VMAC: result_o = vmac_result;
+-            `FUNCT7_VADD: result_o = vadd_result;
+-            `FUNCT7_VSUB: result_o = vsub_result;
+-            `FUNCT7_VMUL: result_o = vmul_result;
+-            default: result_o = '0;
+-        endcase
+-    end
+-    
++
+     // SINGLE-CYCLE COMPLETION
+     assign done_o = start_i;
+     
+@@ -95,7 +62,7 @@ module vector_exec_unit #(
+                 `FUNCT7_VMAC: begin
+                     $display("EXEC: VMAC single-cycle");
+                     $display("  a[0]=%0d, b[0]=%0d, c[0]=%0d, result[0]=%0d", 
+-                             vec_a_i[31:0], vec_b_i[31:0], vec_c_i[31:0], vmac_result[31:0]);
++                             vec_a_i[31:0], vec_b_i[31:0], vec_c_i[31:0], result_o[31:0]);
+                 end
+             endcase
+         end

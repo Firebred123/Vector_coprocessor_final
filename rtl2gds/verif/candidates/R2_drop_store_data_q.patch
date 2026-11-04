@@ -1,0 +1,41 @@
+diff --git a/rtl/execution/vlsu.sv b/rtl/execution/vlsu.sv
+index c85c08b..eaf9f83 100644
+--- a/rtl/execution/vlsu.sv
++++ b/rtl/execution/vlsu.sv
+@@ -47,7 +47,10 @@ module vlsu #(
+     // Data
+     logic [31:0] base_addr_q;
+     logic [VLEN-1:0] load_data_q;
+-    logic [VLEN-1:0] store_data_q;
++    // AREA (rtl-review candidate R2): no store_data_q copy. store_data_i is
++    // VRF read port 2 addressed by rs2_q while the top is in EXEC_LSU; the VRF
++    // is never written during a store, so it holds the value captured at
++    // issue for the whole store burst.
+     
+     // First cycle
+     logic first_load, first_store;
+@@ -75,7 +78,6 @@ module vlsu #(
+             req_cnt_q <= '0;
+             base_addr_q <= '0;
+             load_data_q <= '0;
+-            store_data_q <= '0;
+         end else begin
+             state <= next_state;
+             
+@@ -83,7 +85,6 @@ module vlsu #(
+             if (first_load || first_store) begin
+                 base_addr_q <= base_addr_i;
+                 req_cnt_q <= xif_mem_ready_i ? 4'd1 : 4'd0;
+-                if (first_store) store_data_q <= store_data_i;
+                 if (first_load) load_data_q <= '0;
+             end
+             // Continue issuing
+@@ -178,7 +179,7 @@ module vlsu #(
+             xif_mem_req_o.wdata = store_data_i[31:0];
+         end else if (state == STORE_ACTIVE) begin
+             xif_mem_req_o.we = 1'b1;
+-            xif_mem_req_o.wdata = store_data_q[req_cnt_q * 32 +: 32];
++            xif_mem_req_o.wdata = store_data_i[req_cnt_q * 32 +: 32];
+             xif_mem_req_o.last = (req_cnt_q == WORDS_PER_VECTOR - 1);
+         end else begin
+             xif_mem_req_o.we = 1'b0;

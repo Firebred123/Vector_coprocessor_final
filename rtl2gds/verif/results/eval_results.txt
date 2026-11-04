@@ -1,0 +1,32 @@
+# eval_candidates 2026-11-04T22:17:02Z repo=18a224b
+# yosys: Yosys 0.60 (git sha1 5bafeb77dc71e054fa331ab9efa613e6fb0a1c49, clang++ 17.0.0 -fPIC -O3)  verilator: Verilator 5.032 2025-01-01 rev UNKNOWN.REV  icarus: Icarus Verilog version 12.0 (stable) ()
+baseline sim cross-check icarus vs verilator: compare mode=cycle runs=89 identical=72 excluded_ub=17 failing=0
+baseline yosys_asap7_area=5445.367560 flops=4702
+R1 mode=cycle gate=PASS area=5412.081420 (-0.6%) flops=4702 s1_l1_st0_cycles=1475 | verilator: compare mode=cycle runs=89 identical=89 excluded_ub=0 failing=0 | icarus: compare mode=cycle runs=89 identical=89 excluded_ub=0 failing=0
+R2 mode=cycle gate=PASS area=5289.653160 (-2.9%) flops=4446 s1_l1_st0_cycles=1475 | verilator: compare mode=cycle runs=89 identical=89 excluded_ub=0 failing=0 | icarus: compare mode=cycle runs=89 identical=89 excluded_ub=0 failing=0
+R1R2 mode=cycle gate=PASS area=5263.161300 (-3.3%) flops=4446 s1_l1_st0_cycles=1475 | verilator: compare mode=cycle runs=89 identical=89 excluded_ub=0 failing=0 | icarus: compare mode=cycle runs=89 identical=89 excluded_ub=0 failing=0
+R5L8 mode=txn gate=PASS area=5533.489080 (+1.6%) flops=4711 s1_l1_st0_cycles=1679 | verilator: compare mode=txn runs=89 identical=89 excluded_ub=0 failing=0 | icarus: compare mode=txn runs=89 identical=89 excluded_ub=0 failing=0
+R5L4 mode=txn gate=PASS area=4415.859180 (-18.9%) flops=4711 s1_l1_st0_cycles=1883 | verilator: compare mode=txn runs=89 identical=89 excluded_ub=0 failing=0 | icarus: compare mode=txn runs=89 identical=89 excluded_ub=0 failing=0
+R5L2 mode=txn gate=PASS area=3955.495680 (-27.4%) flops=4712 s1_l1_st0_cycles=2291 | verilator: compare mode=txn runs=89 identical=89 excluded_ub=0 failing=0 | icarus: compare mode=txn runs=89 identical=89 excluded_ub=0 failing=0
+R5L1 mode=txn gate=PASS area=3657.903300 (-32.8%) flops=4713 s1_l1_st0_cycles=3107 | verilator: compare mode=txn runs=89 identical=89 excluded_ub=0 failing=0 | icarus: compare mode=txn runs=89 identical=89 excluded_ub=0 failing=0
+R5L4R2 mode=txn gate=PASS area=4281.737760 (-21.4%) flops=4455 s1_l1_st0_cycles=1883 | verilator: compare mode=txn runs=89 identical=89 excluded_ub=0 failing=0 | icarus: compare mode=txn runs=89 identical=89 excluded_ub=0 failing=0
+R5L2R2 mode=txn gate=PASS area=3835.487700 (-29.6%) flops=4456 s1_l1_st0_cycles=2291 | verilator: compare mode=txn runs=89 identical=89 excluded_ub=0 failing=0 | icarus: compare mode=txn runs=89 identical=89 excluded_ub=0 failing=0
+M1_sub_carry SELFTEST-OK (mutant caught) | compare mode=cycle runs=89 identical=22 excluded_ub=24 failing=43
+M2_store_word_swap SELFTEST-OK (mutant caught) | compare mode=cycle runs=89 identical=23 excluded_ub=24 failing=42
+M3_raddr2_unregistered SELFTEST-OK (mutant caught) | compare mode=cycle runs=89 identical=23 excluded_ub=24 failing=42
+M4_vrf_write_v15_lost SELFTEST-OK (mutant caught) | compare mode=cycle runs=89 identical=29 excluded_ub=22 failing=38
+base+CG area=4855.621140 (-10.8%) icg=19
+R2+CG area=4748.910120 (-12.8%) icg=18
+R5L4R2+CG area=3737.305980 (-31.4%) icg=19
+R5L2R2+CG area=3269.521260 (-40.0%) icg=19
+# harness negative tests (gate_selftest.sh):
+SELFTEST-OK empty_equal (rejected: compare mode=cycle runs=1 identical=0 excluded_ub=0 failing=1)
+SELFTEST-OK zero_runs (rejected: compare mode=cycle runs=0 identical=0 excluded_ub=0 failing=3)
+SELFTEST-OK missing_run (rejected: compare mode=cycle runs=89 identical=88 excluded_ub=0 failing=2)
+SELFTEST-OK truncated (rejected: compare mode=cycle runs=89 identical=88 excluded_ub=0 failing=1)
+SELFTEST-OK wrong_output (rejected: compare mode=cycle runs=89 identical=88 excluded_ub=0 failing=1)
+SELFTEST-OK sim_fatal_run_matrix (rejected: run_matrix: tool=verilator runs=12 failed=12 out=/tmp/rtlrev/selftest2/sim_fatal)
+SELFTEST-OK sim_fatal_compare (rejected: compare mode=cycle runs=89 identical=0 excluded_ub=0 failing=91)
+SELFTEST-OK build_failure (rejected: BUILD FAILED)
+gate_selftest: failures=0
+# done

@@ -1,0 +1,77 @@
+
+9. Printing statistics.
+
+=== vector_coprocessor ===
+
+        +----------Local Count, excluding submodules.
+        |        +-Local Area, excluding submodules.
+        |        | 
+    46461        - wires
+    51238        - wire bits
+       68        - public wires
+     4845        - public wire bits
+       17        - ports
+      323        - port bits
+    46531 5.45E+03 cells
+        3        -   $scopeinfo
+      308   26.944   A2O1A1Ixp33_ASAP7_75t_R
+       81   10.629   A2O1A1O1Ixp25_ASAP7_75t_R
+      488    42.69   AND2x2_ASAP7_75t_R
+      238    20.82   AND3x1_ASAP7_75t_R
+       18    1.837   AND4x1_ASAP7_75t_R
+        9     1.05   AND5x1_ASAP7_75t_R
+        1    0.233   AO211x2_ASAP7_75t_R
+      780   68.234   AO21x1_ASAP7_75t_R
+       96   13.997   AO221x1_ASAP7_75t_R
+       57     7.48   AO22x1_ASAP7_75t_R
+        5    1.166   AO31x2_ASAP7_75t_R
+       15     1.75   AO32x1_ASAP7_75t_R
+      285   24.932   AOI211xp5_ASAP7_75t_R
+     1228   89.521   AOI21xp33_ASAP7_75t_R
+       32    3.266   AOI221xp5_ASAP7_75t_R
+      861    75.32   AOI22xp33_ASAP7_75t_R
+       20    2.041   AOI311xp33_ASAP7_75t_R
+       64    5.599   AOI31xp33_ASAP7_75t_R
+       31    3.164   AOI32xp33_ASAP7_75t_R
+        4    0.467   AOI33xp33_ASAP7_75t_R
+     4702 1.78E+03   DFFASRHQNx1_ASAP7_75t_R
+        1    0.058   HB1xp67_ASAP7_75t_R
+      977   42.734   INVx1_ASAP7_75t_R
+     1348  137.577   MAJIxp5_ASAP7_75t_R
+      202   26.506   MAJx2_ASAP7_75t_R
+     5384  313.995   NAND2xp33_ASAP7_75t_R
+      196   14.288   NAND3xp33_ASAP7_75t_R
+      138   12.072   NAND4xp25_ASAP7_75t_R
+       21    2.143   NAND5xp2_ASAP7_75t_R
+     6135  357.793   NOR2xp33_ASAP7_75t_R
+      760   55.404   NOR3xp33_ASAP7_75t_R
+      285   24.932   NOR4xp25_ASAP7_75t_R
+      374    38.17   NOR5xp2_ASAP7_75t_R
+      361    31.58   O2A1O1Ixp33_ASAP7_75t_R
+      261   30.443   OA211x2_ASAP7_75t_R
+      390   39.803   OA21x2_ASAP7_75t_R
+      190   33.242   OA222x2_ASAP7_75t_R
+      153   22.307   OA22x2_ASAP7_75t_R
+        1    0.219   OA31x2_ASAP7_75t_R
+        1    0.146   OA33x2_ASAP7_75t_R
+      213   18.633   OAI211xp5_ASAP7_75t_R
+     5859  427.121   OAI21xp33_ASAP7_75t_R
+     1278  130.433   OAI221xp5_ASAP7_75t_R
+      978  142.592   OAI222xp33_ASAP7_75t_R
+     2617  228.935   OAI22xp33_ASAP7_75t_R
+       20    2.041   OAI311xp33_ASAP7_75t_R
+      167   14.609   OAI31xp33_ASAP7_75t_R
+       25    2.551   OAI32xp33_ASAP7_75t_R
+        1    0.117   OAI33xp33_ASAP7_75t_R
+      509   44.527   OR2x2_ASAP7_75t_R
+      386   33.767   OR3x1_ASAP7_75t_R
+      426   43.478   OR4x1_ASAP7_75t_R
+       60    6.998   OR5x1_ASAP7_75t_R
+     4409  578.549   XNOR2xp5_ASAP7_75t_R
+     3079  404.026   XOR2xp5_ASAP7_75t_R
+
+   Area for cell type $scopeinfo is unknown!
+
+   Chip area for module '\vector_coprocessor': 5445.367560
+     of which used for sequential elements: 1782.434160 (32.73%)
+

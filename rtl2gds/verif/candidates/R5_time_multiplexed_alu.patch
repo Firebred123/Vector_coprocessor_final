@@ -1,0 +1,138 @@
+diff --git a/rtl/core/vector_coprocessor.sv b/rtl/core/vector_coprocessor.sv
+index e91b8fc..cc13603 100644
+--- a/rtl/core/vector_coprocessor.sv
++++ b/rtl/core/vector_coprocessor.sv
+@@ -9,7 +9,12 @@ import cv32e40x_xif_pkg::*;
+ module vector_coprocessor #(
+     parameter int VLEN = 256,
+     parameter int ELEMENT_WIDTH = 32,
+-    parameter int X_ID_WIDTH = 4
++    parameter int X_ID_WIDTH = 4,
++    // AREA (rtl-review candidate R5): ALU lanes evaluated per cycle. VLEN/32
++    // (=8) keeps all lanes in one cycle but still registers the ALU operands
++    // (timing relief: the multiplier leaves the xif input->VRF path); smaller
++    // values time-multiplex the lanes over VLEN/32/ALU_LANES cycles.
++    parameter int ALU_LANES = 2
+ ) (
+     input  logic           clk_i,
+     input  logic           rst_ni,
+@@ -31,12 +36,17 @@ module vector_coprocessor #(
+ );
+ 
+     localparam int NUM_VREGS = 16;
++    localparam int NUM_ELEM  = VLEN / ELEMENT_WIDTH;
++    localparam int NUM_GRP   = NUM_ELEM / ALU_LANES;
++    localparam int GW        = ALU_LANES * ELEMENT_WIDTH;
++    localparam int GRP_W     = (NUM_GRP > 1) ? $clog2(NUM_GRP) : 1;
+ 
+     // FSM - Keep WRITEBACK for proper handshake
+     typedef enum logic [1:0] {
+         IDLE      = 2'b00,
+         EXEC_LSU  = 2'b01,
+-        WRITEBACK = 2'b10
++        WRITEBACK = 2'b10,
++        EXEC_ALU  = 2'b11
+     } state_t;
+     
+     state_t state, next_state;
+@@ -47,6 +57,8 @@ module vector_coprocessor #(
+     logic [31:0] scalar_rs1_q;
+     logic [X_ID_WIDTH-1:0] id_q;
+     logic is_load_q, is_store_q, is_alu_q;
++    logic [GRP_W-1:0] alu_grp_q;
++    logic [GW-1:0] grp_result;
+     
+     // VRF
+     logic [VLEN-1:0] vrf_rdata1, vrf_rdata2, vrf_rdata3, vrf_wdata;
+@@ -57,7 +69,6 @@ module vector_coprocessor #(
+     logic [VLEN-1:0] vlsu_load_data;
+     
+     // Exec
+-    logic [VLEN-1:0] exec_result;
+     logic [VLEN-1:0] result_data_q;
+     
+     // Decode
+@@ -95,6 +106,7 @@ module vector_coprocessor #(
+             is_store_q <= 1'b0;
+             is_alu_q <= 1'b0;
+             result_data_q <= '0;
++            alu_grp_q <= '0;
+         end else begin
+             state <= next_state;
+             
+@@ -109,15 +121,18 @@ module vector_coprocessor #(
+                 is_store_q <= is_store_in;
+                 is_alu_q <= is_alu_in;
+                 
+-                // Capture ALU result immediately (it's combinational)
+-                if (is_alu_in) begin
+-                    result_data_q <= exec_result;
+-                end
++                alu_grp_q <= '0;
+                 
+                 $display("[VCoP] ACCEPT id=%0d f7=0x%02x rd=v%0d", 
+                     xif_issue_req_i.id, funct7_in, xif_issue_req_i.instr[11:7]);
+             end
+             
++            // ALU: step lane groups; element 0 (scalar result) comes from group 0
++            if (state == EXEC_ALU) begin
++                alu_grp_q <= alu_grp_q + 1'b1;
++                if (alu_grp_q == '0) result_data_q[ELEMENT_WIDTH-1:0] <= grp_result[ELEMENT_WIDTH-1:0];
++            end
++
+             // Capture load result when VLSU done
+             if (state == EXEC_LSU && vlsu_done && is_load_q) begin
+                 result_data_q <= vlsu_load_data;
+@@ -135,11 +150,8 @@ module vector_coprocessor #(
+             IDLE: begin
+                 if (accept_instr) begin
+                     if (is_alu_in) begin
+-                        // ALU: single cycle, write VRF now, go to WRITEBACK
+-                        vrf_we = 1'b1;
+-                        vrf_wdata = exec_result;
+-                        next_state = WRITEBACK;
+-                        $display("[VCoP] ALU complete, result[0]=0x%08x", exec_result[31:0]);
++                        // ALU: operands are read from the VRF via rs1_q/rs2_q/rd_q
++                        next_state = EXEC_ALU;
+                     end else begin
+                         // LSU: go to EXEC_LSU
+                         next_state = EXEC_LSU;
+@@ -158,6 +170,14 @@ module vector_coprocessor #(
+                 end
+             end
+             
++            EXEC_ALU: begin
++                // Write back this lane group; other groups keep vd (= port 3).
++                vrf_we = 1'b1;
++                vrf_wdata = vrf_rdata3;
++                vrf_wdata[alu_grp_q*GW +: GW] = grp_result;
++                if (alu_grp_q == GRP_W'(NUM_GRP - 1)) next_state = WRITEBACK;
++            end
++
+             WRITEBACK: begin
+                 if (xif_result_ready_i) begin
+                     next_state = IDLE;
+@@ -229,16 +249,16 @@ module vector_coprocessor #(
+         .xif_mem_result_i(xif_mem_result_i)
+     );
+     
+-    vector_exec_unit #(.VLEN(VLEN), .ELEMENT_WIDTH(ELEMENT_WIDTH)) exec_unit_inst (
++    vector_exec_unit #(.VLEN(GW), .ELEMENT_WIDTH(ELEMENT_WIDTH)) exec_unit_inst (
+         .clk_i(clk_i), .rst_ni(rst_ni),
+-        .start_i(accept_instr && is_alu_in), 
++        .start_i(state == EXEC_ALU),
+         .done_o(),
+-        .funct7_i(funct7_in), 
++        .funct7_i(funct7_q),
+         .funct3_i(3'b000),
+-        .vec_a_i(vrf_rdata1), 
+-        .vec_b_i(vrf_rdata2), 
+-        .vec_c_i(vrf_rdata3),
+-        .result_o(exec_result)
++        .vec_a_i(vrf_rdata1[alu_grp_q*GW +: GW]),
++        .vec_b_i(vrf_rdata2[alu_grp_q*GW +: GW]),
++        .vec_c_i(vrf_rdata3[alu_grp_q*GW +: GW]),
++        .result_o(grp_result)
+     );
+ 
+ endmodule

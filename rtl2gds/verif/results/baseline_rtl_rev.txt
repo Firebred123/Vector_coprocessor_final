@@ -1,0 +1,9 @@
+rtl_root=/Users/vs/function/Vector_coprocessor_final tool=verilator seeds=1 2 3 4 5 6 7 8 ninstr=300
+18a224b9fbd6fdf7821dac3a739869a48603d5e1
+becd1a8ca3ac25064eeeab2adf25f340f3a95324ea366d006c0c0db0fe09f4d5  /Users/vs/function/Vector_coprocessor_final/rtl/include/cv32e40x_xif_pkg.sv
+79eb322f5ae83e21dbc3408d760c216c97838da33733b0e493f380de2affd4d8  /Users/vs/function/Vector_coprocessor_final/rtl/core/vector_reg_file_3port.sv
+c697c18741c545552e91afa0d4c1ad975a1d01a364436b736d8c0ecd6715e5d8  /Users/vs/function/Vector_coprocessor_final/rtl/execution/vlsu.sv
+b6432211e287d34f6281b910c6483af2ad0f86ced78aa080a9b9b053bc62f831  /Users/vs/function/Vector_coprocessor_final/rtl/execution/vector_exec_unit.sv
+2164c442606947da9262b0e93aa98ed9907e76982ea5fda999deffb69a688826  /Users/vs/function/Vector_coprocessor_final/rtl/core/vector_coprocessor.sv
+bfe2cc077d03e986269a1180828102495ce5acd700d21e696d01ccba8b056a50  /Users/vs/function/Vector_coprocessor_final/include/custom_opcodes.vh
+a0d0a5d22e2d09a83d75d77666232d3fb1bb4e9780d963cd4a597e0157dd243b  /Users/vs/function/Vector_coprocessor_final/rtl2gds/verif/tb_vcop.sv
