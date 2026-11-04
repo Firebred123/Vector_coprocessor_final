@@ -105,8 +105,8 @@ proc vi::place {} {
 }
 
 proc vi::cts {} {
-    set_ccopt_property buffer_cells   {CLKBUFX2 CLKBUFX3 CLKBUFX4 CLKBUFX6 CLKBUFX8 CLKBUFX12}
-    set_ccopt_property inverter_cells {CLKINVX2 CLKINVX3 CLKINVX4 CLKINVX6 CLKINVX8 CLKINVX12}
+    set_ccopt_property buffer_cells   {CLKBUFX2 CLKBUFX3 CLKBUFX4 CLKBUFX6 CLKBUFX8 CLKBUFX12 CLKBUFX16}
+    set_ccopt_property inverter_cells {CLKINVX1 CLKINVX2 CLKINVX3 CLKINVX4 CLKINVX6 CLKINVX8 CLKINVX12 CLKINVX16}
     create_ccopt_clock_tree_spec -file $::vi::rdir/reports/ccopt.spec
     ccopt_design
     vi::rpt cts_clock_trees.rpt { report_ccopt_clock_trees }
@@ -148,6 +148,12 @@ proc vi::finish {} {
     saveNetlist -includePowerGround -excludeLeafCell $o/$top.final.pg.v
     write_sdf $o/$top.final.sdf
     defOut -floorplan -netlist -routing $o/$top.final.def
+    # GDS: layer map and merged cell GDS are generated on the server from the
+    # installed gpdk045/gsclib045 collateral (pdk_local/, never committed to git).
+    set pl $::vi::root/pdk_local
+    streamOut $o/$top.final.gds -mapFile $pl/streamOut_M1_M11.map \
+        -merge [list $pl/gsclib045.gds] -units 2000 -mode ALL \
+        -outputMacros -reportFile $r/final_streamOut.rpt
     saveDesign $::vi::rdir/db/final.enc
     return [vi::qor final]
 }

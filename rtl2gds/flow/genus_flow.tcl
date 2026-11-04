@@ -28,9 +28,15 @@ namespace eval vc {
     variable syn_opts {}
 }
 
-proc vc::setup {run {rtl_dir ""}} {
+proc vc::setup {run {rtl_dir ""} {opts {}}} {
     variable root; variable kit
     set ::vc::run $run
+    set ::vc::opts [dict merge {clock_gating 0} $opts]
+    # Super-threading forks helper processes that talk over /dev/shm + sockets; on
+    # this shared server that deadlocked syn_map (shm errno=28, master stuck in
+    # launch_super_thread_servers vwait). Run in-process only.
+    catch {set_db super_thread_servers {}}
+    catch {set_db max_cpus_per_server 1}
     set ::vc::rtl_dir [expr {$rtl_dir eq "" ? $root : $rtl_dir}]
     set ::vc::rdir $root/runs/$run/genus
     set ::vc::sdc  $root/flow/constraints/vector_coprocessor.sdc
@@ -47,7 +53,9 @@ proc vc::setup {run {rtl_dir ""}} {
     set_db use_area_from_lef true
     set_db init_hdl_search_path [list $::vc::rtl_dir/include $::vc::rtl_dir/rtl/include]
     set_db hdl_track_filename_row_col true
-    return "run=$run rdir=$::vc::rdir rtl=$::vc::rtl_dir libs=[get_db libraries .name]"
+    set_db lp_insert_clock_gating [expr {[dict get $::vc::opts clock_gating] ? true : false}]
+    set st [list [get_db super_thread_servers] [get_db max_cpus_per_server]]
+    return "run=$run rdir=$::vc::rdir rtl=$::vc::rtl_dir opts=$::vc::opts st=$st libs=[get_db libraries .name]"
 }
 
 proc vc::read_elab {} {
@@ -73,13 +81,23 @@ proc vc::constrain {} {
     return "clocks=[get_db clocks .base_name] sdc=$::vc::sdc"
 }
 
+# One MCP call per stage keeps each call under the client's idle limit.
+proc vc::stage {name} {
+    set t0 [clock seconds]
+    switch -- $name {
+        generic { syn_generic }
+        map     { syn_map }
+        opt     { syn_opt }
+        default { error "unknown stage $name" }
+    }
+    vc::report $name
+    set s "[vc::summary] stage=$name runtime=[expr {[clock seconds]-$t0}]s"
+    set f [open $::vc::rdir/reports/qor_ledger.txt a]; puts $f $s; close $f
+    return $s
+}
+
 proc vc::synth {} {
-    syn_generic
-    vc::report generic
-    syn_map
-    vc::report map
-    syn_opt
-    vc::report opt
+    foreach s {generic map opt} { vc::stage $s }
     return [vc::summary]
 }
 
