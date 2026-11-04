@@ -1,10 +1,10 @@
 # Independent Methodology & Area Optimization Review
 
-**Project**: Vector Coprocessor (VCoP) RTL-to-GDS Hardening  
-**Author**: `method-review` (Independent Reviewer)  
-**Target Design Top**: `vector_coprocessor`  
-**Date**: November 2026  
-**Status**: Evidence-Grounded Methodology Review  
+**Project**: Vector Coprocessor (VCoP) RTL-to-GDS Hardening
+**Author**: `method-review` (Independent Reviewer)
+**Target Design Top**: `vector_coprocessor`
+**Date**: November 2026
+**Status**: Evidence-Grounded Methodology Review
 
 ---
 
@@ -119,19 +119,17 @@ Before accounting for internal gate delays, transitions, or wire parasitics, the
 
 ## 5. Structural RTL Analysis & Area Drivers
 
-Pending detailed report metrics from tool runs, structural inspection identifies the key sequential and combinational elements:
-
 ### 5.1 Storage Elements (Vector Register File)
 - **Active Registers**: `vector_coprocessor.sv` instantiates `vector_reg_file_3port` with `NUM_REGS = 16`.
 - **Register v0 Pruning**: In `vector_reg_file_3port.sv`, write enable is conditioned on `waddr_i != 5'b0`, and reads from address 0 return zero. As a result, register `v0` contains no active flip-flops.
 - **Hardware Sequential Count**: The VRF implements **15 active 256-bit registers = 3,840 flip-flops**.
 - **Read Multiplexers**: Three 256-bit read ports each require 16-to-1 multiplexing across the register array.
 
-### 5.2 Arithmetic Datapath Elements
-- `vector_exec_unit.sv` implements eight 32-bit execution lanes for 256-bit vectors:
-  - `vmac_result`: Computes $A \times B + C$ (eight 32x32 multipliers + eight 32-bit adders).
-  - `vmul_result`: Computes $A \times B$ (eight 32x32 multipliers).
-- In the source RTL, `vmac_result` and `vmul_result` are defined in separate `always_comb` blocks. Without synthesis sharing, this structures 16 distinct 32x32 multiplier instances.
+### 5.2 Arithmetic Datapath Elements (Observed Baseline Evidence)
+- `vector_exec_unit.sv` implements eight 32-bit execution lanes for 256-bit vectors (`vmac_result` for $A \times B + C$, and `vmul_result` for $A \times B$).
+- **Tool Observation**: Genus baseline report `generic_area.rpt` lists **exactly eight `mult_unsigned` instances and eight combined add/sub instances** (cell count 71,148; generic cell area 219,540.582).
+- **Finding**: Genus generic synthesis automatically shared arithmetic operators between VMAC and VMUL. Duplicated RTL source expressions did not result in 16 multiplier instances in the generic netlist.
+- **Methodology Rule**: Datapath sharing recommendations should be report-driven: verify mapped datapath reports (`opt_dp.rpt` / `report_dp`) to ensure technology mapping retains this shared structure under timing optimization.
 
 ---
 
@@ -142,14 +140,14 @@ The following directives target area recovery without modifying source RTL. Synt
 1. **Automated Clock-Gating Insertion**:
    - Command: `set_db lp_insert_clock_gating true`
    - *Target*: Replaces individual recirculation multiplexers on the 3,840 VRF flip-flops with Integrated Clock Gating (ICG) cells based on register write enables (`vrf_we && waddr_i == k`).
-2. **Datapath Resource Sharing**:
+2. **Datapath Optimization Monitoring**:
    - Commands:
      ```tcl
      set_db dp_sharing true
      set_db syn_generic_effort high
      set_db syn_opt_effort high
      ```
-   - *Target*: Directs Genus datapath optimization to share 32x32 multiplier hardware between VMAC and VMUL operations.
+   - *Target*: Monitor via `report_dp` / `opt_dp.rpt` to ensure mapped gates preserve arithmetic sharing without duplicating logic under timing pressure.
 3. **Hierarchical Boundary Optimization (Ungrouping)**:
    - Command: `set_db auto_ungroup both`
    - *Target*: Removes module boundaries between top and execution submodules, enabling constant propagation and redundant logic pruning.
@@ -189,6 +187,6 @@ Area optimizations must maintain 100% functional equivalence against the baselin
 | **Reset Network** | Action Required | Set `set_ideal_network [get_ports rst_ni]` during logic synthesis; `phys-lead` |
 | **Clock Uncertainty** | Methodology Rule | Apply consistent, documented jitter/skew budget across runs; `phys-lead` |
 | **Clock Gating** | Recommended | Set `lp_insert_clock_gating true` to collapse VRF recirculation logic; `phys-lead` |
-| **Multiplier Sharing** | Recommended | Set `dp_sharing true` to evaluate VMAC/VMUL multiplier sharing; `phys-lead` |
+| **Datapath Monitoring**| Report-Driven | Track `report_dp` / `opt_dp.rpt` to verify mapped sharing of 8 multipliers; `phys-lead` |
 | **Formal Equivalence** | Ready | Conformal LEC dofile generation integrated into flow; `phys-lead` |
 | **Functional Gate** | Ready | `tb_vcop.sv` matrix ready for differential validation; `rtl-review` |
