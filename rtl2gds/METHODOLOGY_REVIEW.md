@@ -272,16 +272,61 @@ Area optimizations must maintain 100% functional equivalence against the baselin
 
 ---
 
-## 10. Action Checklist & Responsibilities
+## 10. Audit of Baseline Route & Implementation SDC Proposals (Message m56)
+
+Detailed review of the empirical baseline implementation run and proposed methodological axes:
+
+### 10.1 Empirical Baseline Metrics & Post-CTS Hold Crisis Analysis
+- **Genus Synthesis (`syn_opt`)**:
+  * Standard cell area: **98,768 $\mu\text{m}^2$** (28,237 instances).
+  * Sequential count: **4,443 flip-flops** (~36% of cell area).
+  * Register-to-register slack: strictly positive.
+  * Negative slack: Confined to primary I/O, with worst slack $WNS = -5.5\text{ ns}$ on `issue_req.instr -> mem_req.wdata`. This empirical data completely validates the structural feedthrough defect prediction ($in12 + out12 > 20\text{ ns}$).
+- **Innovus Pre-CTS**:
+  * Standard cell area: **91,692 $\mu\text{m}^2$**, utilization 0.65 in a 376.8 $\times$ 374.5 $\mu\text{m}$ core boundary.
+  * Register-to-register setup slack: $WNS = +11.4\text{ ns}$.
+- **Innovus Post-CTS Hold Buffer Explosion**:
+  * Measured clock skew at hold corner: **0.103 ns**.
+  * **Root Cause of Area Blowup**: The un-split SDC command `set_clock_uncertainty 0.25 [get_clocks clk]` applied a 250 ps uncertainty to **both setup and hold**.
+  * On propagated clocks at the fast corner (1.32V/0C), requiring data path delay $> T_{\text{skew}} + T_{\text{unc}} = 0.103 + 0.250 = 0.353\text{ ns}$ triggered **4,900 register-to-register hold violations** ($WNS = -0.157\text{ ns}$) across short flip-flop recirculation loops (`Q -> mux -> D`).
+  * Innovus hold fixing inserted **~8,700 delay/buffer cells**, driving cell area from 91,692 to **124,301 $\mu\text{m}^2$ (+35.6% explosion)**, pushing core density to 88.1% with 40 remaining violations.
+
+### 10.2 Formal Verdict on 'Implementation SDC'
+- **Verdict**: **STRONGLY APPROVED as a separately labeled constraint regime**.
+- **Regime Distinction**:
+  1. *As-Given Baseline SDC*: Kept through final route as the reference anchor documenting original constraint limitations.
+  2. *Implementation SDC*: Applied identically to baseline RTL and all candidates:
+     * Split uncertainty: `set_clock_uncertainty -setup 0.25 [get_clocks clk]` (pre-CTS/synthesis and post-CTS setup) and `set_clock_uncertainty -hold 0.05 [get_clocks clk]` post-CTS with `set_propagated_clock`. This aligns with physical clock jitter margins and prevents artificial delay-cell bloating.
+     * Non-clock input transition: `set_input_transition 0.10 [remove_from_collection [all_inputs] [get_ports clk_i]]`, closing the 168-input lint gap.
+     * **Mandatory Feedthrough Re-budgeting**: Implementation SDC must also rebalance interface delays (e.g. $T_{\text{in}} = 10.0\text{ ns}$, $T_{\text{out}} = 6.0\text{ ns}$) or declare multicycle exceptions on `issue_req.instr -> mem_req.wdata` so candidate runs achieve valid timing closure ($WNS \ge 0$).
+
+### 10.3 Formal Verdict on Genus Clock Gating & ICG Selection
+- **Verdict**: **STRONGLY APPROVED**.
+- **Dual Mechanism & Value**:
+  * Replacing recirculation feedback multiplexers with Integrated Clock Gating (ICG) cells reduces combinational cell area by ~11% during synthesis.
+  * **Hold Crisis Solution**: By eliminating the `Q -> mux -> D` feedback loops, clock gating eliminates the exact short-path hold violations that triggered 8,700 buffer insertions post-CTS, offering a massive physical area recovery.
+- **Resolving the `LBR-76` Warning**:
+  * In `gsclib045` `slow.lib`, cells named `TLATNTSCA*` possess `clock_gating_integrated_cell : "latch_posedge_precontrol"` (requiring a scan test control pin `TE`). Because the design does not configure DFT scan, Genus rejects them with `LBR-76`.
+  * **Solution**: Use the non-scan ICG family present in `gsclib045`: **`TLATNCA*`** (`TLATNCAX2`, `TLATNCAX3`, `TLATNCAX4`, `TLATNCAX8`, `TLATNCAX12`, `TLATNCAX16`, `TLATNCAX20`), which carry `clock_gating_integrated_cell : "latch_posedge"` with standard `CK` and `E` pins.
+  * Direct Genus to target this cell family:
+    ```tcl
+    set_db lp_insert_clock_gating true
+    set_db [get_db lib_cells *TLATNCA*] .dont_use false
+    set_db lp_clock_gating_cell [get_db lib_cells *TLATNCAX4*]
+    ```
+  * Alternatively, allow Genus to synthesize discrete latch+AND clock gating (`set_db lp_clock_gating_style latch`).
+
+---
+
+## 11. Action Checklist & Responsibilities
 
 | Item | Status | Action Item / Owner |
 | :--- | :---: | :--- |
 | **PDK Collateral** | Qualified | GPDK 45nm approved for flow with captable/GDS map caveats; `phys-lead` |
+| **Implementation SDC**| Approved | Separate regime with hold unc 0.05 post-CTS, input tran 0.1, rebalanced IO; `phys-lead` |
+| **Hold Fixing Remedy** | Identified | Clock gating + 0.05 hold unc eliminates ~8.7k delay cell bloat; `phys-lead` |
+| **Clock Gating Cells** | Action Required | Use `TLATNCA*` (non-scan latch_posedge) to bypass LBR-76 on `TLATNTSCA*`; `phys-lead` |
 | **GDS Layer Map** | Action Required | Verify `M1`..`M11` numbers against `gpdk045.layermap` (no guessing); `phys-lead` |
-| **Lock Contention** | Action Required | Wait for original client timeout; do not delete held lock; `phys-lead` |
-| **FIFO Detachment** | Action Required | Detach stale listener using PID-conditional `close_fifo`; `phys-lead` |
-| **Super-Threading** | Action Required | Disable distributed ST (`super_thread_servers ""`) to avoid shm errno 28; `phys-lead` |
-| **SDC Acceptance** | Policy Requirement| Original SDC is Diagnostic Only; rebalanced SDC required for acceptance; `phys-lead` |
 | **CTS Cells** | Action Required | Restrict CCOpt to `CLKBUFX*` / `CLKINVX*` cells in `gsclib045`; `phys-lead` |
 | **Tapcells / Tie-offs**| Action Required | Use `TIEHI`/`TIELO` and `FILL*`; do not call `addWellTap` (no tap macro); `phys-lead` |
 | **Area Metric Suite** | Approved | Compare Genus cell area, Innovus stdcell area, core area, and die area; `phys-lead` |
