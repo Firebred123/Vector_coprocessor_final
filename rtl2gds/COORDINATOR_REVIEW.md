@@ -33,3 +33,11 @@ Report root: `<server experiment>/runs/baseline/genus/reports/`.
 Independent negative checks of the draft `verif/compare.sh` returned exit 0 for both (a) two empty equal traces and (b) differing `s1_l0_e1.trace` files. Draft `run_matrix.sh` also discards simulator exit status with `|| true`. These are gate weaknesses, not DUT results. The reviewer has been asked to fail missing/empty results, crashes, mismatched file sets, and unexpected differences by default. Out-of-domain simulator-dependent cases require an explicit documented exclusion and separate classification, not a blanket success result.
 
 Offline MCP protocol verification: `python3 -m pytest -q tests` in PD_MCP completed with 21 passing tests. This does not replace the live flow test.
+
+## Mapping recovery and bridge safeguard
+
+The initial runtime monitoring watched newer GUI PID34703; phys-lead later identified the actual synthesis in older PID21628. Both processes were reading the same Genus FIFO. The earlier healthy-progress interpretation is withdrawn: GUI CPU accumulation did not demonstrate mapping progress. Phys-lead reports a super-threading shared-memory errno28 deadlock in the active synthesis process; recovery must use the exact listener/worker identities and preserve unrelated processes.
+
+An isolated PD_MCP fix is committed as `12d49fa` on `fix/gui-bridge-single-owner` in `/Users/vs/function/copilot-worktrees/PD_MCP-bridge-owner`. A kernel-owned localhost socket lease prevents two updated bridges for the same normalized directory/tool, preserves ownership across re-source, and releases on explicit detach or process exit. All 28 offline tests pass, including competing Tcl processes and simultaneous starts. This fix is not deployed to the live experiment. Legacy listeners must first be detached individually; old scripts do not honor the new lease. Native Cadence socket/zlib compatibility and live migration remain to be verified by the implementation owner.
+
+The committed RTL review supplies 89/89 matching candidate-vs-baseline runs on each simulator for R2, along with negative-gate tests. Yosys/ABC ASAP7 estimates are exploratory and must not be substituted for gsclib045 Genus/Innovus measurements. Latency-changing R5 variants may be evaluated as separately labeled alternatives, while the primary comparison preserves cycle behavior.
