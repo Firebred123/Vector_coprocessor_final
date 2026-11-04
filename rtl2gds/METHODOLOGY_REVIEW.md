@@ -21,7 +21,7 @@ In accordance with [COORDINATION.md](file:///Users/vs/function/Vector_coprocesso
 
 ## 2. Physical Collateral & PDK Feasibility Audit
 
-### 2.1 Collateral Inventory
+### 2.1 Collateral Inventory & Signoff Reality
 A complete RTL-to-GDS physical flow requires both logical timing libraries (`.lib`) and physical layout abstractions (`.lef`):
 
 1. **Local ASAP7 7nm Collateral (`PDK/LIB/asap7sc7p5t_*.lib`)**:
@@ -31,13 +31,17 @@ A complete RTL-to-GDS physical flow requires both logical timing libraries (`.li
 2. **Server-Side SCL 180nm Collateral (`/cadence/scl180/...`)**:
    - **Status**: Complete (Liberty `.lib`, Tech LEF, Cell LEF present on server).
 3. **Server-Side Cadence GPDK 45nm Collateral (`/cadence/FOUNDRY/digital/45nm/dig`)**:
-   - **Status**: *Recommended & Feasible*.
+   - **Status**: *Viable for Implementation with Qualified Limitations (Not Signoff-Complete)*.
    - **Observed Collateral Paths**:
      * Timing models: `lib/slow.lib` (10 MB, 1.08V/125C setup), `typical.lib`, `fast.lib` (1.32V/0C hold).
      * Physical layout LEFs: `lef/gsclib045_tech.lef` (18 KB, `M1`..`M11`), `lef/gsclib045_macro.lef` (1.6 MB).
      * Parasitic extraction: Native Innovus captable (`captable`) and Quantus `qx/qrcTechFile` (201 MB).
      * Cell GDSII: `/cadence/FOUNDRY/stdcell/lan/flow/t1u1/reference_libs/GPDK045/gsclib045_all_v4.4/gsclib045/gds/gsclib045.gds` (9.3 MB).
-   - **Verdict**: Fully viable for Genus Physical Layout Estimation (PLE) and closed-loop Innovus PnR.
+   - **Critical Collateral Caveat**:
+     * The mere presence of files on disk does **not** establish this kit as signoff-complete.
+     * The tech LEF uses `M1`..`M11` naming, whereas `qrcTechFile` and `streamOut.map` use `Metal1`..`Metal10`.
+     * Post-route extraction with native Innovus captable is an internal implementation model, not a certified signoff extraction deck.
+     * StreamOut GDS layer mapping must be verified against documented `gpdk045.layermap` layer numbers; guessing layer numbers is strictly prohibited.
 
 ### 2.2 Collateral Verification Items
 - **Unit Consistency**: Ensure SDC `set_units` matches Liberty library defaults (`slow.lib`: time unit `1ns`, capacitive load unit `1pF`).
@@ -101,7 +105,7 @@ A complete RTL-to-GDS physical flow requires both logical timing libraries (`.li
    - Standard analog/SoC stream maps (`/cadence/FOUNDRY/analog/45nm/soce/streamOut.map`) expect `Metal1`, `Metal2`, etc.
    - Calling `streamOut` without a layer map translating `M1` $\rightarrow$ `Metal1` will omit metal geometries from the exported GDSII layout.
 5. **Parasitic Extraction Collateral**:
-   - For post-route extraction, using native Innovus captable with matched `M1`..`M11` layers is appropriate given the `M1` vs `Metal1` layer name discrepancy in `qx/qrcTechFile`.
+   - For post-route extraction, using native Innovus captable with matched `M1`..`M11` layers is appropriate given the `M1` vs `Metal1` layer name discrepancy in `qx/qrcTechFile`. Note that captable-based RC is an implementation approximation, not signoff extraction.
 
 ---
 
@@ -124,9 +128,10 @@ Before accounting for internal gate delays, transitions, or wire parasitics, the
 1. `xif_issue_req_i` $\rightarrow$ decode $\rightarrow$ `xif_issue_resp_o`: Combinational handshake decode in `vector_coprocessor.sv` when `state == IDLE`.
 2. `xif_issue_req_i` / `xif_issue_valid_i` $\rightarrow$ `vlsu_inst` $\rightarrow$ `xif_mem_valid_o` / `xif_mem_req_o`: Combinational zero-latency memory request generation in `vlsu.sv`.
 
-**Actionable Diagnostic Notice**:
-- If `coprocessor_commercial.sdc` is evaluated unchanged for baseline diagnostics, these feedthrough paths will predictably violate setup by $\ge 4.25\text{ ns}$.
-- For valid baseline-to-candidate comparison under closed timing ($WNS \ge 0$), the interface budget must be re-balanced (e.g. $T_{\text{in}} = 10.0\text{ ns}$, $T_{\text{out}} = 6.0\text{ ns}$, leaving $3.75\text{ ns}$ internally) or multicycle path exceptions formally specified.
+**Diagnostic Policy vs Acceptance Standard**:
+- **Diagnostic Only**: Evaluating the original uncorrected `coprocessor_commercial.sdc` is permitted strictly as a diagnostic baseline to document the pre-existing constraint error ($WNS \le -4.25\text{ ns}$).
+- **Acceptance Requirement**: Accepted baseline and candidate implementations must share a **corrected, physically realizable interface budget** (e.g. allocating $T_{\text{in}} = 10.0\text{ ns}$, $T_{\text{out}} = 6.0\text{ ns}$, leaving $3.75\text{ ns}$ for internal logic, or formally defining protocol multicycle path exceptions).
+- A blanket unchanged invalid SDC that structurally guarantees negative slack cannot serve as the acceptance standard for candidate comparisons.
 
 ### 4.2 SDC Coverage: Baseline Evidence vs Preventive Practices
 - **Port Coverage (Evidence)**: Genus baseline `check_timing_intent` confirms **0 unconstrained input and output ports**. The wildcard patterns (`xif_issue_req_i*`, `xif_commit_i*`, etc.) successfully matched all elaborated ports in Genus 19.13.
@@ -202,32 +207,35 @@ An investigation into the prolonged execution of `syn_map` during the baseline r
 - Exhaustion of system shared memory segments caused the super-threading worker to hang and the synthesis mapping thread to deadlock.
 
 ### 7.3 Methodological Safeguards & Corrective Actions
-1. **Bridge Single-Owner Enforcement**:
-   - The named pipe architecture currently lacks an exclusive process lock. When multiple tool instances run from the same directory, commands are non-deterministically distributed. The bridge must incorporate a single-owner safeguard (e.g. PID validation or file lock) to reject secondary listeners.
-2. **Listener Detachment**:
-   - `phys-lead` must detach the inactive session via `close_fifo` (or terminate the stale process PID 21628) to ensure deterministic dispatch to the intended session.
-3. **Super-Threading Resource Management**:
+1. **Bridge Single-Owner Enforcement & Lock Contention**:
+   - A live MCP detach attempt timed out after 120s with `'another Genus command holds lock'`.
+   - The original `vc::synth` Python client `FileLock` remains held until its client-side timeout expires.
+   - Sending new MCP requests while the lock is held is blocked.
+   - Lead must recover/wait for the original run's client timeout first, rather than deleting the held lock.
+   - Then, implement a **PID-conditional `close_fifo`** so only the unintended PID detaches, rather than disabling `fileevent` globally.
+   - Root has prepared an offline single-owner fix (`12d49fa`) in an isolated PD_MCP worktree (passing 28 tests; not deployed).
+2. **Super-Threading Resource Management**:
    - On heavily shared multi-user server environments where `/dev/shm` can be depleted, distributed super-threading is prone to `errno 28` deadlocks.
    - Genus should be constrained to local multi-threading without distributed shared-memory dispatch (`set_db max_cpus 1` or explicitly controlled thread pools) to prevent unrecoverable shm deadlocks.
 
 ---
 
-## 8. Audit of Physical Lead Implementation Choices (Message m48)
+## 8. Audit of Physical Lead Implementation Choices (Message m48 & m50)
 
 Review and formal verdict on implementation strategy proposed by `phys-lead`:
 
 1. **Collateral & Library Strategy**:
-   - *Verdict*: **Approved**.
+   - *Verdict*: **Approved for Implementation with Signoff Qualifications**.
    - Pairing `gsclib045` official release (`slow.lib` for setup, `fast.lib` for hold) with tech LEF (`M1`..`M11`) and macro LEF is the only physically complete path.
    - `set_db use_area_from_lef true` is strictly necessary because `slow.lib` carries `area : 0.0`.
-   - Adopting native Innovus captable extraction avoids layer name discrepancies with `qrcTechFile` (`M1` vs `Metal1`).
-   - Generating a custom GDS map for `M1`..`M11` based on `gpdk045.layermap` layer numbers prevents empty metal geometries.
+   - Adopting native Innovus captable extraction avoids layer name discrepancies with `qrcTechFile` (`M1` vs `Metal1`). Note that captable extraction is an internal approximation, not signoff QRC extraction.
+   - Generating a custom GDS map for `M1`..`M11` based on `gpdk045.layermap` layer numbers prevents empty metal geometries. **Layer numbers must be independently cross-checked against documented PDK layermaps; guessing layer mappings is prohibited.**
    - Rejecting `gsclib045.fixed.lef` is fully endorsed: off-grid widths (e.g. `INVX1` 0.405 $\mu\text{m}$ on a 0.200 $\mu\text{m}$ site grid) trigger unroutable placement DRC violations.
-2. **Constraints Strategy**:
-   - *Verdict*: **Conditionally Approved with Diagnostic Caveat**.
-   - Keeping `coprocessor_commercial.sdc` unchanged maintains baseline consistency.
-   - *Warning*: As documented in Section 4.1, combinational feedthrough paths (`xif_issue_req_i -> xif_issue_resp_o` and `xif_mem_valid_o/req_o`) will deterministically report negative slack ($WNS \le -4.25\text{ ns}$) because $in12 + out12 + unc0.25 = 24.25\text{ ns} > 20.0\text{ ns}$.
-   - For candidate area comparisons requiring valid timing closure ($WNS \ge 0$), both baseline and candidate must evaluate under a consistent, re-balanced interface budget.
+2. **Constraints Strategy & Acceptance Standard**:
+   - *Verdict*: **Original SDC is Diagnostic Only; Corrected SDC Required for Acceptance**.
+   - Keeping `coprocessor_commercial.sdc` unchanged is permitted **strictly as a diagnostic run** to document pre-existing constraints.
+   - Combinational feedthrough paths (`xif_issue_req_i -> xif_issue_resp_o` and `xif_mem_valid_o/req_o`) will deterministically report negative slack ($WNS \le -4.25\text{ ns}$) because $in12 + out12 + unc0.25 = 24.25\text{ ns} > 20.0\text{ ns}$.
+   - For valid candidate area comparisons requiring achievable timing closure ($WNS \ge 0$), both baseline and candidate must evaluate under a consistent, re-balanced interface budget.
 3. **Area Metrics Suite**:
    - *Verdict*: **Approved**.
    - Tracking Genus cell area ($\mu\text{m}^2$) alongside Innovus post-route cell area, core area, and die area across achievable core utilizations fulfills `COORDINATION.md` Rule 7.
@@ -236,10 +244,11 @@ Review and formal verdict on implementation strategy proposed by `phys-lead`:
    - Innovus sequence (init $\rightarrow$ floorplan $\rightarrow$ PG rings/stripes $\rightarrow$ place/preCTS $\rightarrow$ ccopt $\rightarrow$ postCTS $\rightarrow$ NanoRoute $\rightarrow$ postRoute $\rightarrow$ fillers $\rightarrow$ signoff checks) is sound.
    - *Reminder*: Restrict CCOpt explicitly to `CLKBUFX*` / `CLKINVX*` cells. Remember that `gsclib045` has no `WELLTAP` macro; use `TIEHI`/`TIELO` and `FILL*`.
    - Conformal LEC (`CONFRML201`) batch verification provides the required formal equivalence gate.
-5. **Super-Threading Recommendation**:
-   - *Verdict*: **Strongly Recommend Disabling Distributed Super-Threading**.
-   - Set `set_db super_thread_servers ""` or `set_db max_cpus 1` / `set_db max_cpus_per_server 1`.
-   - On this multi-user server, `/dev/shm` exhaustion (`errno 28`) causes unrecoverable deadlocks during mapping. Local single-process execution guarantees determinism and stability.
+5. **Super-Threading & Lock Recovery Recommendation**:
+   - *Verdict*: **Wait for Client Timeout, Disconnect Stale Listener with PID Check, Disable Super-Threading**.
+   - Do not delete the held `FileLock`. Wait for the 120s client timeout to clear.
+   - Execute a PID-conditional `close_fifo` to safely detach PID 21628.
+   - Disable distributed super-threading in Genus (`set_db super_thread_servers ""` / `set_db max_cpus 1`).
 
 ---
 
@@ -267,13 +276,14 @@ Area optimizations must maintain 100% functional equivalence against the baselin
 
 | Item | Status | Action Item / Owner |
 | :--- | :---: | :--- |
-| **PDK Collateral** | Approved | GPDK 45nm official release (`slow.lib`, `fast.lib`, `M1`..`M11` LEFs); `phys-lead` |
-| **Area Calculation** | Approved | `set_db use_area_from_lef true` active in Genus; `phys-lead` |
+| **PDK Collateral** | Qualified | GPDK 45nm approved for flow with captable/GDS map caveats; `phys-lead` |
+| **GDS Layer Map** | Action Required | Verify `M1`..`M11` numbers against `gpdk045.layermap` (no guessing); `phys-lead` |
+| **Lock Contention** | Action Required | Wait for original client timeout; do not delete held lock; `phys-lead` |
+| **FIFO Detachment** | Action Required | Detach stale listener using PID-conditional `close_fifo`; `phys-lead` |
 | **Super-Threading** | Action Required | Disable distributed ST (`super_thread_servers ""`) to avoid shm errno 28; `phys-lead` |
-| **Feedthrough Slack** | Acknowledged | Note $in12 + out12 > 20\text{ ns}$ causes negative WNS on feedthrough; `phys-lead` |
+| **SDC Acceptance** | Policy Requirement| Original SDC is Diagnostic Only; rebalanced SDC required for acceptance; `phys-lead` |
 | **CTS Cells** | Action Required | Restrict CCOpt to `CLKBUFX*` / `CLKINVX*` cells in `gsclib045`; `phys-lead` |
 | **Tapcells / Tie-offs**| Action Required | Use `TIEHI`/`TIELO` and `FILL*`; do not call `addWellTap` (no tap macro); `phys-lead` |
-| **GDS Layer Map** | Action Required | Generate GDS map for `M1`..`M11` from `gpdk045.layermap` numbers; `phys-lead` |
 | **Area Metric Suite** | Approved | Compare Genus cell area, Innovus stdcell area, core area, and die area; `phys-lead` |
 | **Formal Equivalence** | Ready | Conformal LEC dofile generation integrated into flow; `phys-lead` |
 | **Functional Gate** | Ready | `tb_vcop.sv` matrix ready for differential validation; `rtl-review` |
