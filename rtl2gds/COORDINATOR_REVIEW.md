@@ -27,3 +27,9 @@ Report root: `<server experiment>/runs/baseline/genus/reports/`.
 - A finite differential simulation matrix supplies sampled evidence, not a proof of full equivalence. Gate failures, missing completion markers, crashes and empty traces must fail validation even when a test deliberately tolerates known baseline ISA bugs.
 - Do not reduce uncertainty or remove constrained functionality to manufacture gains. Document any experimental environment assumptions and preserve baseline/candidate comparability.
 - GDS export alone does not establish clean DRC, LVS, connectivity, timing, or equivalence.
+
+## Differential gate review (draft, before reviewer fixes)
+
+Independent negative checks of the draft `verif/compare.sh` returned exit 0 for both (a) two empty equal traces and (b) differing `s1_l0_e1.trace` files. Draft `run_matrix.sh` also discards simulator exit status with `|| true`. These are gate weaknesses, not DUT results. The reviewer has been asked to fail missing/empty results, crashes, mismatched file sets, and unexpected differences by default. Out-of-domain simulator-dependent cases require an explicit documented exclusion and separate classification, not a blanket success result.
+
+Offline MCP protocol verification: `python3 -m pytest -q tests` in PD_MCP completed with 21 passing tests. This does not replace the live flow test.
