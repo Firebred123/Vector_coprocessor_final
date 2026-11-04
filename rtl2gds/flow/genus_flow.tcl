@@ -35,6 +35,11 @@ proc vc::setup {run {rtl_dir ""} {opts {}}} {
     # Super-threading forks helper processes that talk over /dev/shm + sockets; on
     # this shared server that deadlocked syn_map (shm errno=28, master stuck in
     # launch_super_thread_servers vwait). Run in-process only.
+    # Root cause seen live: an auto-launched ST server's csh wrapper inherits the
+    # write end of the MCP bridge's `redirect` pipe, so the redirect never sees EOF
+    # and the GUI blocks in RedirectUndo::undo (pthread_join). auto_super_thread is
+    # what forks it; super_thread_servers {} alone does not stop it.
+    catch {set_db auto_super_thread false}
     catch {set_db super_thread_servers {}}
     catch {set_db max_cpus_per_server 1}
     set ::vc::rtl_dir [expr {$rtl_dir eq "" ? $root : $rtl_dir}]

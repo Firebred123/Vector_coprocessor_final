@@ -83,11 +83,13 @@ proc vi::floorplan {util {aspect 1.0} {margin 6.0}} {
 }
 
 proc vi::power {} {
+    # Wide-metal spacing rule: 1.25 um for 1.0-1.5 um wires (IMPPP-136), use 1.3.
+    editDelete -type Special -net {VDD VSS}
     addRing -nets {VDD VSS} -type core_rings -follow core \
         -layer {top M11 bottom M11 left M10 right M10} \
-        -width 1.5 -spacing 0.8 -offset 0.8
+        -width 1.5 -spacing 1.3 -offset 0.8
     addStripe -nets {VDD VSS} -layer M10 -direction vertical \
-        -width 1.0 -spacing 0.8 -set_to_set_distance 40 -start_from left -start_offset 10
+        -width 1.0 -spacing 1.3 -set_to_set_distance 40 -start_from left -start_offset 10
     sroute -connect {corePin} -nets {VDD VSS} -corePinTarget {ring stripe}
     vi::rpt power_verify_pg.rpt { verifyPowerVia }
     return "pg done"
