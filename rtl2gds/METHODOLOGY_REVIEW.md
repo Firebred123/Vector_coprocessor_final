@@ -33,9 +33,9 @@ A complete RTL-to-GDS physical flow requires both logical timing libraries (`.li
 3. **Server-Side Cadence GPDK 45nm Collateral (`/cadence/FOUNDRY/digital/45nm/dig`)**:
    - **Status**: *Recommended & Feasible*.
    - **Observed Collateral Paths**:
-     * Timing models: `lib/slow.lib` (10 MB), `typical.lib`, `fast.lib`.
-     * Physical layout LEFs: `lef/gsclib045_tech.lef` (18 KB), `lef/gsclib045_macro.lef` (1.6 MB).
-     * Quantus QRC parasitics: `qx/qrcTechFile` (201 MB) and layer map `qx/mapFile`.
+     * Timing models: `lib/slow.lib` (10 MB, 1.08V/125C setup), `typical.lib`, `fast.lib` (1.32V/0C hold).
+     * Physical layout LEFs: `lef/gsclib045_tech.lef` (18 KB, `M1`..`M11`), `lef/gsclib045_macro.lef` (1.6 MB).
+     * Parasitic extraction: Native Innovus captable (`captable`) and Quantus `qx/qrcTechFile` (201 MB).
      * Cell GDSII: `/cadence/FOUNDRY/stdcell/lan/flow/t1u1/reference_libs/GPDK045/gsclib045_all_v4.4/gsclib045/gds/gsclib045.gds` (9.3 MB).
    - **Verdict**: Fully viable for Genus Physical Layout Estimation (PLE) and closed-loop Innovus PnR.
 
@@ -101,7 +101,7 @@ A complete RTL-to-GDS physical flow requires both logical timing libraries (`.li
    - Standard analog/SoC stream maps (`/cadence/FOUNDRY/analog/45nm/soce/streamOut.map`) expect `Metal1`, `Metal2`, etc.
    - Calling `streamOut` without a layer map translating `M1` $\rightarrow$ `Metal1` will omit metal geometries from the exported GDSII layout.
 5. **Parasitic Extraction Collateral**:
-   - Use the native 45nm QRC techfile (`/cadence/FOUNDRY/digital/45nm/dig/qx/qrcTechFile`) with layer map `qx/mapFile` for signoff extraction rather than the mismatched `cln28hpl` captable.
+   - For post-route extraction, using native Innovus captable with matched `M1`..`M11` layers is appropriate given the `M1` vs `Metal1` layer name discrepancy in `qx/qrcTechFile`.
 
 ---
 
@@ -124,8 +124,9 @@ Before accounting for internal gate delays, transitions, or wire parasitics, the
 1. `xif_issue_req_i` $\rightarrow$ decode $\rightarrow$ `xif_issue_resp_o`: Combinational handshake decode in `vector_coprocessor.sv` when `state == IDLE`.
 2. `xif_issue_req_i` / `xif_issue_valid_i` $\rightarrow$ `vlsu_inst` $\rightarrow$ `xif_mem_valid_o` / `xif_mem_req_o`: Combinational zero-latency memory request generation in `vlsu.sv`.
 
-**Actionable Remedy**:
-- The I/O budget must be re-budgeted to provide a positive internal capture window (e.g. allocating $T_{\text{in}} = 10.0\text{ ns}$, $T_{\text{out}} = 6.0\text{ ns}$, leaving $3.75\text{ ns}$ for internal logic), or protocol-allowed multicycle exceptions must be formally specified.
+**Actionable Diagnostic Notice**:
+- If `coprocessor_commercial.sdc` is evaluated unchanged for baseline diagnostics, these feedthrough paths will predictably violate setup by $\ge 4.25\text{ ns}$.
+- For valid baseline-to-candidate comparison under closed timing ($WNS \ge 0$), the interface budget must be re-balanced (e.g. $T_{\text{in}} = 10.0\text{ ns}$, $T_{\text{out}} = 6.0\text{ ns}$, leaving $3.75\text{ ns}$ internally) or multicycle path exceptions formally specified.
 
 ### 4.2 SDC Coverage: Baseline Evidence vs Preventive Practices
 - **Port Coverage (Evidence)**: Genus baseline `check_timing_intent` confirms **0 unconstrained input and output ports**. The wildcard patterns (`xif_issue_req_i*`, `xif_commit_i*`, etc.) successfully matched all elaborated ports in Genus 19.13.
@@ -211,7 +212,38 @@ An investigation into the prolonged execution of `syn_map` during the baseline r
 
 ---
 
-## 8. Equivalence Checking & Verification Requirements
+## 8. Audit of Physical Lead Implementation Choices (Message m48)
+
+Review and formal verdict on implementation strategy proposed by `phys-lead`:
+
+1. **Collateral & Library Strategy**:
+   - *Verdict*: **Approved**.
+   - Pairing `gsclib045` official release (`slow.lib` for setup, `fast.lib` for hold) with tech LEF (`M1`..`M11`) and macro LEF is the only physically complete path.
+   - `set_db use_area_from_lef true` is strictly necessary because `slow.lib` carries `area : 0.0`.
+   - Adopting native Innovus captable extraction avoids layer name discrepancies with `qrcTechFile` (`M1` vs `Metal1`).
+   - Generating a custom GDS map for `M1`..`M11` based on `gpdk045.layermap` layer numbers prevents empty metal geometries.
+   - Rejecting `gsclib045.fixed.lef` is fully endorsed: off-grid widths (e.g. `INVX1` 0.405 $\mu\text{m}$ on a 0.200 $\mu\text{m}$ site grid) trigger unroutable placement DRC violations.
+2. **Constraints Strategy**:
+   - *Verdict*: **Conditionally Approved with Diagnostic Caveat**.
+   - Keeping `coprocessor_commercial.sdc` unchanged maintains baseline consistency.
+   - *Warning*: As documented in Section 4.1, combinational feedthrough paths (`xif_issue_req_i -> xif_issue_resp_o` and `xif_mem_valid_o/req_o`) will deterministically report negative slack ($WNS \le -4.25\text{ ns}$) because $in12 + out12 + unc0.25 = 24.25\text{ ns} > 20.0\text{ ns}$.
+   - For candidate area comparisons requiring valid timing closure ($WNS \ge 0$), both baseline and candidate must evaluate under a consistent, re-balanced interface budget.
+3. **Area Metrics Suite**:
+   - *Verdict*: **Approved**.
+   - Tracking Genus cell area ($\mu\text{m}^2$) alongside Innovus post-route cell area, core area, and die area across achievable core utilizations fulfills `COORDINATION.md` Rule 7.
+4. **Innovus Stage Flow & Conformal LEC**:
+   - *Verdict*: **Approved**.
+   - Innovus sequence (init $\rightarrow$ floorplan $\rightarrow$ PG rings/stripes $\rightarrow$ place/preCTS $\rightarrow$ ccopt $\rightarrow$ postCTS $\rightarrow$ NanoRoute $\rightarrow$ postRoute $\rightarrow$ fillers $\rightarrow$ signoff checks) is sound.
+   - *Reminder*: Restrict CCOpt explicitly to `CLKBUFX*` / `CLKINVX*` cells. Remember that `gsclib045` has no `WELLTAP` macro; use `TIEHI`/`TIELO` and `FILL*`.
+   - Conformal LEC (`CONFRML201`) batch verification provides the required formal equivalence gate.
+5. **Super-Threading Recommendation**:
+   - *Verdict*: **Strongly Recommend Disabling Distributed Super-Threading**.
+   - Set `set_db super_thread_servers ""` or `set_db max_cpus 1` / `set_db max_cpus_per_server 1`.
+   - On this multi-user server, `/dev/shm` exhaustion (`errno 28`) causes unrecoverable deadlocks during mapping. Local single-process execution guarantees determinism and stability.
+
+---
+
+## 9. Equivalence Checking & Verification Requirements
 
 Area optimizations must maintain 100% functional equivalence against the baseline RTL:
 
@@ -231,20 +263,17 @@ Area optimizations must maintain 100% functional equivalence against the baselin
 
 ---
 
-## 9. Action Checklist & Responsibilities
+## 10. Action Checklist & Responsibilities
 
 | Item | Status | Action Item / Owner |
 | :--- | :---: | :--- |
-| **PDK Collateral** | Verified | GPDK 45nm confirmed with timing, LEFs, and QRC techfile; `phys-lead` |
-| **Synthesis Deadlock**| Root Cause Found | Older PID 21628 consumed FIFO and hung on shm errno 28; PID 34703 was idle GUI; `phys-lead` |
-| **FIFO Single Owner** | Action Required | Detach stale listener with `close_fifo`; root evaluating bridge lock; `phys-lead` |
-| **Super-Threading** | Action Required | Restrict or disable distributed shm super-threading to avoid errno 28; `phys-lead` |
-| **SDC Budget Defect** | Action Required | Resolve $in12 + out12 > 20\text{ ns}$ negative timing window on feedthrough paths; `phys-lead` |
-| **Input Transition** | Action Required | Fix 168 pins missing transition via `set_input_transition`; `phys-lead` |
-| **Reset Network** | Action Required | Set `set_ideal_network [get_ports rst_ni]` during logic synthesis; `phys-lead` |
-| **Clock Uncertainty** | Methodology Rule | Apply consistent, documented jitter/skew budget across runs; `phys-lead` |
+| **PDK Collateral** | Approved | GPDK 45nm official release (`slow.lib`, `fast.lib`, `M1`..`M11` LEFs); `phys-lead` |
+| **Area Calculation** | Approved | `set_db use_area_from_lef true` active in Genus; `phys-lead` |
+| **Super-Threading** | Action Required | Disable distributed ST (`super_thread_servers ""`) to avoid shm errno 28; `phys-lead` |
+| **Feedthrough Slack** | Acknowledged | Note $in12 + out12 > 20\text{ ns}$ causes negative WNS on feedthrough; `phys-lead` |
 | **CTS Cells** | Action Required | Restrict CCOpt to `CLKBUFX*` / `CLKINVX*` cells in `gsclib045`; `phys-lead` |
 | **Tapcells / Tie-offs**| Action Required | Use `TIEHI`/`TIELO` and `FILL*`; do not call `addWellTap` (no tap macro); `phys-lead` |
-| **GDS Layer Map** | Action Required | Verify `streamOut` layer map converts `M1`..`M11` to `Metal1`..`Metal11`; `phys-lead` |
+| **GDS Layer Map** | Action Required | Generate GDS map for `M1`..`M11` from `gpdk045.layermap` numbers; `phys-lead` |
+| **Area Metric Suite** | Approved | Compare Genus cell area, Innovus stdcell area, core area, and die area; `phys-lead` |
 | **Formal Equivalence** | Ready | Conformal LEC dofile generation integrated into flow; `phys-lead` |
 | **Functional Gate** | Ready | `tb_vcop.sv` matrix ready for differential validation; `rtl-review` |
