@@ -1,0 +1,26 @@
+{
+  "bytes": 38747034, 
+  "check": "record_integrity_and_structure_references_only", 
+  "database_unit_metres": 4.9999999999999993e-10, 
+  "path": "runs/r1_base_u97/innovus/outputs/vector_coprocessor.final.gds", 
+  "records": 4518962, 
+  "sha256": "698e2b3c475e7b408af10ca8b393da233955b4ecb0b74154c98a46f9ae342d1e", 
+  "structures": 232, 
+  "top": "vector_coprocessor", 
+  "top_geometry_counts_by_layer": {
+    "11": 104944, 
+    "152": 20, 
+    "162": 4, 
+    "31": 44519, 
+    "33": 21024, 
+    "35": 8437, 
+    "38": 2408, 
+    "40": 288, 
+    "7": 14459, 
+    "9": 219313, 
+    "99": 1
+  }, 
+  "top_geometry_elements": 415417, 
+  "top_reference_instances": 336084, 
+  "undefined_references": []
+}
