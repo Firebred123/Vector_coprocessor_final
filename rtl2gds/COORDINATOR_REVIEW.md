@@ -41,3 +41,21 @@ The initial runtime monitoring watched newer GUI PID34703; phys-lead later ident
 An isolated PD_MCP fix is committed as `12d49fa` on `fix/gui-bridge-single-owner` in `/Users/vs/function/copilot-worktrees/PD_MCP-bridge-owner`. A kernel-owned localhost socket lease prevents two updated bridges for the same normalized directory/tool, preserves ownership across re-source, and releases on explicit detach or process exit. All 28 offline tests pass, including competing Tcl processes and simultaneous starts. This fix is not deployed to the live experiment. Legacy listeners must first be detached individually; old scripts do not honor the new lease. Native Cadence socket/zlib compatibility and live migration remain to be verified by the implementation owner.
 
 The committed RTL review supplies 89/89 matching candidate-vs-baseline runs on each simulator for R2, along with negative-gate tests. Yosys/ABC ASAP7 estimates are exploratory and must not be substituted for gsclib045 Genus/Innovus measurements. Latency-changing R5 variants may be evaluated as separately labeled alternatives, while the primary comparison preserves cycle behavior.
+
+## Independently checked corrected-R1 physical results (u70)
+
+| Run | Final cell area (um2) | Core area (um2) | Die area (um2) | Setup WNS (ns) | Hold WNS (ns) | Native geometry/connectivity/antenna |
+|---|---:|---:|---:|---:|---:|---|
+| r1_base_u70 | 86686.81 | 131190.52 | 140087.53 | +0.007 | +0.043 | clean |
+| r1_cg_u70 | 77849.70 | 118992.40 | 127472.63 | +0.021 | +0.071 | clean |
+
+Source: final QoR ledgers, native verify reports, and compressed final setup/hold summaries read directly from the server. Both timing summaries have zero violating paths and zero cap/transition/fanout/length DRVs. These runs use matched R1 constraints/corners and target utilization0.70. CG reduces final cell area about10.2% and die area about9.0% at that utilization. Denser floorplans remain under evaluation by phys-lead. Native implementation checks do not replace unavailable foundry signoff DRC/LVS or QRC. Post-route/ECO netlist equivalence is assigned to method-review and remains pending at this checkpoint.
+
+The public `verify_gds_structure.py` checker was tested with seven local positive/negative fixtures and run with Python2.6.6 on both final server GDS files. It checks record completion, expected routed top geometry, duplicate/cyclic/undefined structure references, and units; it is not a complete GDS semantics, layer-rule, DRC or LVS checker. Both files have database unit0.5nm and zero missing/cyclic references:
+
+- Baseline:44308544bytes,232structures,500390direct-top geometry elements. SHA256 `ea90babad1ec618f46a602112d371c6eded53091e3d4ffe609fbd709d2b9c4b6`.
+- CG:35485172bytes,238structures,360339direct-top geometry elements. SHA256 `bdc59bc88f27e185b4db4e92a455c21a2b15e058f45da2b806e2c28806f2a142`.
+
+Checker and full JSON summaries were committed server-side as `382926f` under `verification/coordinator/`; design/library GDS remains server-only.
+
+The quota-reset scheduler successfully resumed exact-model phys-lead at07:31IST. A subsequent SSH outage was traced to the existing FortiClient VPN profile being disconnected. Starting that existing profile restored the utun route and SSH without credential or profile edits. The completed one-off quota wakeup was removed; the user's original all-idle wakeup remains.
