@@ -120,6 +120,12 @@ proc vi::cts {} {
 }
 
 proc vi::route {} {
+    # gsclib045_tech.lef has only VIARULE ... GENERATE (no fixed VIA cells), so
+    # NanoRoute stops with NRDB-158 "Missing via from M1 to M2". Generate them.
+    if {[llength [dbGet head.vias]] < 20} {
+        setGenerateViaMode -auto true
+        generateVias
+    }
     setNanoRouteMode -routeWithTimingDriven true -routeWithSiDriven true \
         -routeTopRoutingLayer 9 -routeBottomRoutingLayer 1
     routeDesign

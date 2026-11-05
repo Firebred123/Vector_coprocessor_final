@@ -31,7 +31,7 @@ namespace eval vc {
 proc vc::setup {run {rtl_dir ""} {opts {}}} {
     variable root; variable kit
     set ::vc::run $run
-    set ::vc::opts [dict merge {clock_gating 0} $opts]
+    set ::vc::opts [dict merge {clock_gating 0 sdc vector_coprocessor.sdc} $opts]
     # Super-threading forks helper processes that talk over /dev/shm + sockets; on
     # this shared server that deadlocked syn_map (shm errno=28, master stuck in
     # launch_super_thread_servers vwait). Run in-process only.
@@ -44,7 +44,7 @@ proc vc::setup {run {rtl_dir ""} {opts {}}} {
     catch {set_db max_cpus_per_server 1}
     set ::vc::rtl_dir [expr {$rtl_dir eq "" ? $root : $rtl_dir}]
     set ::vc::rdir $root/runs/$run/genus
-    set ::vc::sdc  $root/flow/constraints/vector_coprocessor.sdc
+    set ::vc::sdc  $root/flow/constraints/[dict get $::vc::opts sdc]
     file mkdir $::vc::rdir/reports $::vc::rdir/outputs
     foreach d [get_db designs] { delete_obj $d }
     if {[llength [get_db libraries]] == 0} {
@@ -140,4 +140,21 @@ proc vc::export {} {
     write_do_lec -golden_design rtl -revised_design $o/$top.v \
         -logfile $::vc::rdir/reports/lec.log > $o/rtl_to_final.lec.do
     return "netlist=$o/$top.v sdc=$o/$top.sdc"
+}
+
+# Whole synthesis in one call, verbose output to <rdir>/genus_run.log so the MCP
+# reply stays small. Returns the per-stage ledger lines.
+proc vc::full {run {rtl_dir ""} {opts {}}} {
+    set t0 [clock seconds]
+    vc::setup $run $rtl_dir $opts
+    redirect $::vc::rdir/genus_run.log {
+        vc::read_elab
+        vc::constrain
+        foreach s {generic map opt} { vc::stage $s }
+        vc::export
+    }
+    set ca 0.0; foreach a [get_db insts .area] { set ca [expr {$ca + $a}] }
+    set line "run=$run final std_cell_area=[format %.3f $ca] insts=[llength [get_db insts]] seq=[llength [get_db insts -if {.is_sequential==true}]] icg=[llength [get_db insts -if {.is_integrated_clock_gating==true}]] wns=[get_db designs .slack] runtime=[expr {[clock seconds]-$t0}]s"
+    set f [open $::vc::rdir/reports/qor_ledger.txt a]; puts $f $line; close $f
+    return $line
 }
