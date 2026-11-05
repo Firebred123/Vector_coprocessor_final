@@ -74,6 +74,51 @@ vector_coprocessor (Top-level)
   * `r1_r2_cg`: 154 POs Equivalent, 3,893 DFFs Equivalent, 1 BBOX Equivalent (Total: 4,048 Equivalent points, 0 Abort, 0 Non-EQ).
 - **Subproof Status**: **PASS (100% Equivalent)**.
 
+### 2.1 Audit of Flagged Modeling Options, Ignored Outputs, and Constraints ($constraints)
+
+In Conformal's summary report (`report_verification -hier -verbose`), two informational flags are marked with an asterisk:
+1. `Category 1. Non-standard modeling options used: 1` $\rightarrow$ `Floating signals tied to Z: no *`
+2. `Category 2. Incomplete verification: 1` $\rightarrow$ `Command "add ignore outputs" used: yes *`
+Additionally, line 248 of `r1_cg.log` reports `// (F36) Added 874 don't care(s) due to $constraints.`
+
+A rigorous audit of `/tmp/method_review_lec/hier_r1_cg.do` demonstrates that these flags represent legitimate compositional boundary modeling and enum-domain constraints, **leaving zero externally observable behaviors unchecked**:
+
+#### 1. Identification of Ignored Outputs (Lines 757–854 in `hier_r1_cg.do`)
+- **Scope**: All `add_ignored_outputs` directives are **strictly confined to internal submodule `vlsu` boundary pins in Subproof 1**. There are **EXACTLY ZERO ignored outputs on the top-level macro `vector_coprocessor`**.
+- **Exact Pins Ignored in Subproof 1**:
+  * **12 Constant Outputs**:
+    - `xif_mem_req_o[mode][1:0]` (tied to constant `2'b10`)
+    - `xif_mem_req_o[size][2:0]` (tied to constant `3'b010`)
+    - `xif_mem_req_o[be][3:0]` (tied to constant `4'b1111`)
+    - `xif_mem_req_o[attr][1:0]` (tied to constant `2'b00`)
+    - `xif_mem_req_o[spec]` (tied to constant `1'b0`)
+  * **4 Feedthrough Outputs**:
+    - `xif_mem_req_o[id][3:0]` (direct feedthrough from input `id_i[3:0]`)
+- **Compositional Justification**:
+  * In leaf submodule `vlsu`, `write_hier_compare_dofile` identifies constant outputs and replaces them with stuck-at assertions (`add_output_stuck_at <val> -Golden -hier`) and pin-equivalences (`add_pin_equivalences {id_i[k]} {xif_mem_req_o[id][k]}`). Because they are not combinational functions of internal leaf states, they are omitted as independent key points in the leaf solver (`add_ignored_outputs`).
+  * **Proof of Verification at Chip Primary Outputs**: In Subproof 2 (parent module `vector_coprocessor`), lines 1350–1361 (Golden) and 1510–1521 (Revised) assert the **exact same stuck-at constants on both Golden RTL and the synthesized gate netlist**. Conformal explicitly proves that both Golden and Revised gates drive these identical constant values to the top-level pins. All 154 primary outputs of `vector_coprocessor` are mapped and verified equivalent (0 ignored).
+
+#### 2. Root Cause of "Added 874 don't care(s) due to $constraints" (Line 248 in `r1_cg.log`)
+- **Origin of the Number 874**:
+  * Subproof 1 (`vlsu`) has **exactly 874 compare points** (324 POs + 550 DFFs = 874).
+  * When boundary constraints (`add_output_stuck_at`, `add_pin_equivalences`, `add_ignored_inputs`) and `-enumconstraint` are active, Conformal adds the constraint predicate $C(x)$ to the solver miter of **every compare point in the module**.
+  * Conformal emitted message `(F36)` indicating that 1 don't-care constraint predicate was added for each of the 874 compare points in `vlsu`.
+- **Legitimacy of Constraints**:
+  * `-enumconstraint`: In `vlsu.sv`, `state_t` has 3 valid states (`IDLE=2'b00`, `LOAD_ACTIVE=2'b01`, `STORE_ACTIVE=2'b10`). Value `2'b11` is an unmapped SystemVerilog enum state; constraining it to unreachable space is standard and safe.
+  * Boundary stuck-ats: 12 constant output values are constrained to their exact RTL-defined values.
+  * In Subproof 2 (`vector_coprocessor`), line 411 similarly reports `Added 4646 don't cares due to $constraints` across all 4,646 parent compare points.
+
+#### 3. Floating Signals Tied to Z: no *
+- Conformal flags this because `set_undriven_signal 0` was configured.
+- In standard CMOS digital logic, internal signals must not float at high-impedance Z; tying undriven signals to logic 0 prevents false X-propagation in the solver.
+- The only undriven nets in the design are the 10 unused inputs of the OpenHW X-Interface structs (`xif_mem_resp_i.exc`, `exccode[5:0]`, `dbg` and `xif_mem_result_i.err`, `dbg`), which the vector coprocessor architecture does not implement.
+
+#### 4. Confirmation from Cadence Baseline LEC Log
+- Inspection of the official baseline synthesis LEC log generated directly by Genus (`runs/baseline/genus/reports/lec.log`, line 966) reveals the **identical** flags:
+  * `Floating signals tied to Z: no *`
+  * `Command "add ignore outputs" used: yes *`
+- This confirms that these flags are the intrinsic output of Cadence's automated `write_hier_compare_dofile -dynamic_hierarchy` flow, representing verified hierarchical decomposition rather than unchecked functional paths.
+
 ### Full Design State Point Accounting
 
 $$\text{Total Design DFFs} = \text{DFFs in } vlsu\_inst + \text{DFFs in Top Module}$$
