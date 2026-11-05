@@ -304,7 +304,7 @@ Detailed review of the empirical baseline implementation run and proposed method
 - **Verdict**: **STRONGLY APPROVED**.
 - **Dual Mechanism & Value**:
   * Replacing recirculation feedback multiplexers with Integrated Clock Gating (ICG) cells reduces combinational cell area by ~11% during synthesis.
-  * **Hold Crisis Solution**: By eliminating the `Q -> mux -> D` feedback loops, clock gating eliminates the exact short-path hold violations that triggered 8,700 buffer insertions post-CTS, offering a massive physical area recovery.
+  * **Hold Path Mitigation**: By replacing `Q -> mux -> D` feedback loops with gated clock enable pins during synthesis, clock gating directly addresses the short-path recirculation loops that triggered 8,700 delay buffer insertions post-CTS in the baseline run (final hold closure subject to post-CTS physical design checks).
 - **Resolving the `LBR-76` Warning**:
   * In `gsclib045` `slow.lib`, cells named `TLATNTSCA*` possess `clock_gating_integrated_cell : "latch_posedge_precontrol"` (requiring a scan test control pin `TE`). Because the design does not configure DFT scan, Genus rejects them with `LBR-76`.
   * **Solution**: Use the non-scan ICG family present in `gsclib045`: **`TLATNCA*`** (`TLATNCAX2`, `TLATNCAX3`, `TLATNCAX4`, `TLATNCAX8`, `TLATNCAX12`, `TLATNCAX16`, `TLATNCAX20`), which carry `clock_gating_integrated_cell : "latch_posedge"` with standard `CK` and `E` pins.
@@ -339,13 +339,13 @@ Detailed review of the empirical baseline implementation run and proposed method
 An exhaustive formal equivalence campaign using Cadence Conformal LEC (`20.10-p100`) across all regimes establishes the following conclusions (detailed in [`rtl2gds/FORMAL_REVIEW.md`](file:///Users/vs/function/Vector_coprocessor_final/rtl2gds/FORMAL_REVIEW.md)):
 1. **Primary Formally Supported Comparison**: **`original+CG` (`r1_cg`)**
    - **Formally Verified**: 100% equivalent to the original baseline RTL across all 4,443 state points (including hierarchical VLSU subproof). 0 Aborts, 0 Non-equivalences.
-   - **Hold Crisis Solution**: Replaces recirculation feedback muxes with 28 Integrated Clock Gating (ICG) cells (`TLATNCAX*`), eliminating the short-path hold violations that triggered 8,700 delay buffer insertions post-CTS.
+   - **Hold Mitigation Mechanism**: Replaces recirculation feedback muxes with 28 Integrated Clock Gating (ICG) cells (`TLATNCAX*`), removing `Q -> mux -> D` short paths during synthesis to mitigate post-CTS hold buffer explosion (subject to post-route physical design evaluation).
    - **Area & Timing**: Delivers 83,268 $\mu\text{m}^2$ standard cell area (-9.3% vs `r1_base` 91,830 $\mu\text{m}^2$), with $+0.0\text{ ps}$ slack.
    - **Recommendation**: Serves as the primary, formally supported comparison candidate for the area reduction study.
 2. **Secondary Simulation-Supported Exploration**: **Candidate R2 (`r1_r2_cg`)**
    - **Netlist Equivalence**: Synthesized gates match Candidate R2 RTL (80,957 $\mu\text{m}^2$ stdcell area, -11.8% vs `r1_base`).
-   - **Global Verification Reality**: Equivalence between Original RTL and Candidate R2 RTL is **formally inconclusive / non-equivalent under unconstrained formal verification** (`run_orig_rtl_vs_r2_rtl_sec.do`: 32 Non-equivalent POs on `/xif_mem_req_o[wdata][31:0]`, 256 unmapped Golden DFFs, 3,025 abort points).
-   - **Reason**: The architectural contract of VLSU was changed from a registered snapshot model (`store_data_q`) to a combinational bypass model across VRF port 2. Without inductive protocol invariants guaranteeing VRF stability across multi-beat bursts, formal equivalence cannot be proven.
+   - **Global Verification Reality**: Equivalence proof between Original RTL and Candidate R2 RTL is **incomplete under this comparison setup** (`run_orig_rtl_vs_r2_rtl_sec.do`: 32 non-equivalent cutpoint outputs on `/xif_mem_req_o[wdata][31:0]`, 256 unmapped Golden DFFs, 3,025 abort points). While unconstrained cutpoints diverge without temporal reachability assertions, this does not establish a reset-reachable counterexample witness.
+   - **Reason**: The architectural contract of VLSU was changed from a registered snapshot model (`store_data_q`) to a combinational bypass model across VRF port 2. Without inductive protocol invariants guaranteeing VRF stability across multi-beat bursts, formal equivalence cannot be proven under combinational/cutpoint SEC setups.
    - **Recommendation**: Candidate R2 is supported only by bounded differential simulation (`tb_vcop.sv`) and must be presented with clear architectural qualifications, not as an unconstrained drop-in replacement.
 
 ---
@@ -356,7 +356,7 @@ An exhaustive formal equivalence campaign using Cadence Conformal LEC (`20.10-p1
 | :--- | :---: | :--- |
 | **PDK Collateral** | Qualified | GPDK 45nm approved for flow with captable/GDS map caveats; `phys-lead` |
 | **Implementation SDC**| Approved | Separate regime with hold unc 0.05 post-CTS, input tran 0.1, rebalanced IO; `phys-lead` |
-| **Hold Fixing Remedy** | Identified | Clock gating + 0.05 hold unc eliminates ~8.7k delay cell bloat; `phys-lead` |
+| **Hold Mitigation** | Identified | Clock gating + 0.05 hold unc targets ~8.7k delay cell bloat; `phys-lead` |
 | **Clock Gating Cells** | Action Required | Use `TLATNCA*` (non-scan latch_posedge) to bypass LBR-76 on `TLATNTSCA*`; `phys-lead` |
 | **GDS Layer Map** | Action Required | Verify `M1`..`M11` numbers against `gpdk045.layermap` (no guessing); `phys-lead` |
 | **CTS Cells** | Action Required | Restrict CCOpt to `CLKBUFX*` / `CLKINVX*` cells in `gsclib045`; `phys-lead` |
