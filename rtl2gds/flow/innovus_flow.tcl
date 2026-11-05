@@ -149,7 +149,13 @@ proc vi::finish {} {
     set o $::vi::rdir/outputs
     addFiller -cell {FILL64 FILL32 FILL16 FILL8 FILL4 FILL2 FILL1} -prefix FILLER
     setNanoRouteMode -droutePostRouteSpreadWire false
-    ecoRoute -fix_drc
+    # One fix pass is not always enough (r1_cg_u80: 22 -> 1 -> 0): repeat until clean.
+    for {set i 1} {$i <= 4} {incr i} {
+        ecoRoute -fix_drc
+        verify_drc -limit 10000 -report $r/finish_drcfix$i.rpt
+        set fh [open $r/finish_drcfix$i.rpt]; set dd [read $fh]; close $fh
+        if {[regexp {No DRC violations} $dd]} break
+    }
     timeDesign -postRoute -outDir $r/timing_signoff -prefix final
     timeDesign -postRoute -hold -outDir $r/timing_signoff_hold -prefix final_hold
     vi::rpt final_area.rpt        { report_area }
