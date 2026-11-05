@@ -19,4 +19,15 @@ R2 RTL to its own gates is supported by the independent hierarchical synthesis-e
 - Standalone formal dofiles must name exact golden inputs and netlist hashes. Do not use the stale auto-generated `write_do_lec` revised paths.
 - Genus timing reports use ps: raw slack0.1 is0.1ps, not0.1ns. Printed nonnegative synthesis slack is not postroute setup/hold closure.
 - Hardwired-zero v0 is this project's custom behavior, not a standard RISC-V vector convention.
-- Physical implementation, final geometry/connectivity/antenna, postroute timing, and stream-out checks remain open for the corrected R1 baseline and clock-gated candidate. The older R0 diagnostic GDS still has23 native geometry violations.
+- The corrected R1 baseline and clock-gated candidate at 70% utilization have passed native Innovus geometry/connectivity/antenna checks, postroute setup/hold checks, and structural stream-out checks. These are experiment checks, not foundry DRC/LVS signoff. The older R0 diagnostic GDS still has23 native geometry violations.
+
+## Postroute equivalence acceptance: 70% utilization
+
+The coordinator independently inspected both native Conformal log summaries and SHA256 values. Genus-to-final-netlist equivalence is accepted for `r1_base_u70` and `r1_cg_u70`: each reports 4597 equivalent points (154 outputs and 4443 DFFs), zero non-equivalent, abort, unknown, uncompared or unmapped key points, no blackboxes, and no ignored outputs. Both reports mark incomplete verification and non-standard modeling as zero. The clock-gated comparison folds the same 28 unreachable ICG latches on each side. This extends the synthesis proof through physical implementation under the documented formal models; it does not prove the project's ISA or replace physical signoff.
+
+| Run | Final functional netlist SHA256 | Native Conformal log SHA256 |
+| --- | --- | --- |
+| `r1_base_u70` | `0b47145855b2c1658b4d9414926ee0919548de616d000bf1b8aa1656db90942a` | `bea268891a7f8072dc969c20d1862b2ad09eaee8cdcda3aba4b52840fd100e41` |
+| `r1_cg_u70` | `d3b18a0759cff8ad85d3614b40caa196ca6a9b237615734568d9fee92eaee655` | `aaaf82d8e4737c2d45e19906fbca65630fce27e9d2d7cf85de7f31c1f4f6fd33` |
+
+Logs reside in server `verification/method_review_lec/`; exact standalone comparison scripts are committed in `rtl2gds/formal/`. Any later density winner requires its own final-netlist comparison and artifact hashes before inheriting this acceptance.
