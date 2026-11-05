@@ -1,0 +1,80 @@
+## genus baseline
+run=baseline final std_cell_area=98768.369 insts=28237
+## genus r1_base
+run=r1_base final std_cell_area=91829.685 insts=25923 seq=4443 icg=0 wns=0.0 runtime=559s
+## genus r1_cg
+run=r1_cg final std_cell_area=83267.561 insts=25173 seq=4471 icg=28 wns=0.0 runtime=471s
+## genus r1_r2_cg
+run=r1_r2_cg final std_cell_area=80957.453 insts=24911 seq=4214 icg=27 wns=0.1 runtime=531s
+## innovus baseline_u70
+stage=final insts=38090 cell_area=128222.55 core_area=141107.83 die_area=150329.52 util=0.9087
+|           WNS (ns):| -5.476  | 10.897  | -5.476  |
+|    Violating Paths:|   275   |    0    |   275   |
+|           WNS (ns):| -0.312  | -0.312  | 11.551  |
+|    Violating Paths:|  6830   |  6830   |    0    |
+drc:   Total Violations : 23 Viols.
+conn: 1
+antenna: 1
+## innovus r1_base_u70
+stage=final insts=25813 cell_area=86686.81 core_area=131190.52 die_area=140087.53 util=0.6608
+|           WNS (ns):|  0.007  |  9.509  |  0.007  |
+|    Violating Paths:|    0    |    0    |    0    |
+|           WNS (ns):|  0.043  |  0.043  |  6.114  |
+|    Violating Paths:|    0    |    0    |    0    |
+drc: 0
+conn: 1
+antenna: 1
+## innovus r1_cg_u70
+stage=final insts=24949 cell_area=77849.70 core_area=118992.40 die_area=127472.63 util=0.6542
+|           WNS (ns):|  0.021  |  9.567  | 16.118  |  0.021  |
+|    Violating Paths:|    0    |    0    |    0    |    0    |
+|           WNS (ns):|  0.071  |  0.071  |  0.305  |  6.110  |
+|    Violating Paths:|    0    |    0    |    0    |    0    |
+drc: 0
+conn: 1
+antenna: 1
+## innovus r1_cg_u80
+stage=final insts=25042 cell_area=77974.32 core_area=104095.22 die_area=112036.31 util=0.7491
+|           WNS (ns):|  0.018  |  9.384  | 16.085  |  0.018  |
+|    Violating Paths:|    0    |    0    |    0    |    0    |
+|           WNS (ns):|  0.070  |  0.070  |  0.280  |  6.100  |
+|    Violating Paths:|    0    |    0    |    0    |    0    |
+drc: 0
+conn: 1
+antenna: 1
+## innovus r1_cg_u90
+stage=final insts=25120 cell_area=77783.80 core_area=92556.49 die_area=100052.97 util=0.8404
+|           WNS (ns):|  0.014  |  9.355  | 16.014  |  0.014  |
+|    Violating Paths:|    0    |    0    |    0    |    0    |
+|           WNS (ns):|  0.072  |  0.072  |  0.301  |  6.097  |
+|    Violating Paths:|    0    |    0    |    0    |    0    |
+drc: 0
+conn: 1
+antenna: 1
+## innovus r1_cg_u97
+stage=final insts=24923 cell_area=77650.93 core_area=85851.58 die_area=93076.59 util=0.9045
+|           WNS (ns):|  0.018  |  9.600  | 16.239  |  0.018  |
+|    Violating Paths:|    0    |    0    |    0    |    0    |
+|           WNS (ns):|  0.070  |  0.070  |  0.299  |  6.099  |
+|    Violating Paths:|    0    |    0    |    0    |    0    |
+drc: 0
+conn: 1
+antenna: 1
+## innovus r1_base_u97
+stage=final insts=25609 cell_area=86290.19 core_area=94704.25 die_area=102285.55 util=0.9112
+|           WNS (ns):|  0.016  |  9.431  |  0.016  |
+|    Violating Paths:|    0    |    0    |    0    |
+|           WNS (ns):|  0.042  |  0.042  |  6.089  |
+|    Violating Paths:|    0    |    0    |    0    |
+drc: 0
+conn: 1
+antenna: 1
+## innovus r1_r2_cg_u97
+stage=final insts=24696 cell_area=76004.73 core_area=83483.57 die_area=90610.54 util=0.9104
+|           WNS (ns):|  0.011  |  9.306  | 16.142  |  0.011  |
+|    Violating Paths:|    0    |    0    |    0    |    0    |
+|           WNS (ns):|  0.070  |  0.070  |  0.278  |  6.081  |
+|    Violating Paths:|    0    |    0    |    0    |    0    |
+drc: 0
+conn: 1
+antenna: 1

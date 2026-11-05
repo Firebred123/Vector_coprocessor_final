@@ -44,6 +44,38 @@ Experiment root on server: `~/Desktop/rtl2gds/vector_coprocessor` (own git repo;
 
 Constraint regimes: **R0** = unchanged commercial SDC, kept as a diagnostic reference only. **R1** = implementation SDC `flow/constraints/vector_coprocessor_impl.sdc` (hold uncertainty 0.05 ns, IO 10/6 ns, input transition 0.10 ns), applied identically to all compared runs. Timing values printed by Genus `get_db .slack` are in ps.
 
+## Physical results (R1 implementation SDC, gsclib045 slow setup / fast hold, captable RC)
+
+All rows below are fully closed: setup and hold have 0 violating paths, 0 max_tran/max_cap, Innovus `verify_drc` 0, `verifyConnectivity` clean and `verifyProcessAntenna` clean. Each has a GDS (gsclib045 cell GDS merged), DEF, netlists and SDF under `runs/<run>/innovus/outputs/` on the server. Areas are in um^2, timing in ns. The "util" target is relative to Genus netlist area; "placed" is final cell/core.
+
+| Run | RTL / flow | Util target / placed | Final cell area | Core area | Die area | Setup WNS | Hold WNS |
+|---|---|---|---:|---:|---:|---:|---:|
+| r1_base_u70 | original | 0.70 / 0.661 | 86,686.81 | 131,190.52 | 140,087.53 | +0.007 | +0.043 |
+| r1_cg_u70 | original + CG | 0.70 / 0.654 | 77,849.70 | 118,992.40 | 127,472.63 | +0.021 | +0.071 |
+| r1_cg_u80 | original + CG | 0.80 / 0.749 | 77,974.32 | 104,095.22 | 112,036.31 | +0.018 | +0.070 |
+| r1_cg_u90 | original + CG | 0.90 / 0.840 | 77,783.80 | 92,556.49 | 100,052.97 | +0.014 | +0.072 |
+| **r1_base_u97** | original | 0.97 / 0.911 | 86,290.19 | 94,704.25 | **102,285.55** | +0.016 | +0.042 |
+| **r1_cg_u97** (primary result) | original + CG | 0.97 / 0.905 | 77,650.93 | 85,851.58 | **93,076.59** | +0.018 | +0.070 |
+| r1_r2_cg_u97 (secondary) | R2 + CG | 0.97 / 0.910 | 76,004.73 | 83,483.57 | 90,610.54 | +0.011 | +0.070 |
+
+Comparisons:
+- Clock gating at equal constraints and equal target utilization: die -9.4% at 0.70 (140,088 -> 127,473) and **-9.0% at 0.97 (102,286 -> 93,077)**. Final cell area -10.2% / -10.0%.
+- Primary best result vs the 0.70 baseline: die **-33.6%** (140,088 -> 93,077). About 27 points of that come from floorplan density, which the baseline also reaches (r1_base_u97). The RTL/flow saving itself is the 9.0% at equal utilization.
+- Secondary R2+CG at 0.97: die -11.4% vs r1_base_u97. It stays secondary until original-to-R2 equivalence is proven (simulation evidence only).
+- R0 diagnostic (`baseline_u70`, original SDC): not closed (hold -0.312 ns on 6,830 paths, IO setup -5.476 ns, 23 DRC). Kept only to motivate R1.
+
+GDS structural check (`gds_check.py`, server): every final GDS has one top cell `vector_coprocessor` and 0 undefined cell references. It contains M1..M11/Via1..Via10 on the gpdk045 layer numbers plus base layers from the merged cell GDS. Raw summaries: `rtl2gds/results/run_summaries.txt`.
+
+Closure notes: post-route wire spreading created M1 parallel-run-length spacing errors, so it is disabled and `ecoRoute -fix_drc` is repeated until clean (1-3 passes). r1_cg_u70 needed one manual ECO (INVX1->INVX3 plus ecoPlace) and a high-effort post-route pass. The flow now uses 0.02 ns target slack, and the later runs closed without manual steps.
+
+## Limitations (not signoff)
+
+- Educational Cadence 45 nm kit (gsclib045 + gpdk045 layer numbers), not the original ASAP7 target.
+- RC comes from the kit captable (labelled cln28hpl, shrink 0.9) with Innovus native extraction. No QRC with matching layer names exists. No SI/IR/EM signoff.
+- DRC is Innovus `verify_drc` against LEF rules only. Foundry PVS/Pegasus DRC and LVS on the GDS were **not run**.
+- R1 IO budgets (10/6 ns) and the hold margin (0.05 ns) are experimental assumptions for a standalone macro, not a verified host budget.
+- Timing is single-corner per check (slow for setup, fast for hold) with OCV mode post-route. No multi-corner/multi-mode signoff.
+
 ## Incidents
 
 1. **WorkBoard export blocked** by the eda-mcp command guard. Allowed dirs: `~/Desktop/cmos65`, `~/Desktop/eldo`, `/tmp`. The guard was not modified. WorkBoard `vector_coprocessor` exports to `/tmp/vector_coprocessor_wb` (mode 700). An ssh rsync then promotes it into the experiment root.
