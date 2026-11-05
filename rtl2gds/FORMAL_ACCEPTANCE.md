@@ -10,3 +10,9 @@ The independent report added in commit `366bc88` is **provisional pending eviden
 - Hardwired-zero v0 is a project-specific behavior, not a standard RISC-V vector-register convention.
 
 The reviewer has been asked to resolve these points and correct its report. Final physical/equivalence acceptance remains open.
+
+## Updated review (07:16 IST)
+
+The reviewer reconciled the BBOX as a previously proved VLSU submodule (550DFFs) plus3893top-levelDFFs, matching the4443 baseline state points. Native r1_cg.log independently confirms two equivalent module pairs, zero final abort/unknown/non-equivalent points, and zero undefined-cell blackboxes. However, its verification report also flags one incomplete-verification item (`add ignore outputs` used) and constraint/don't-care modeling; the reviewer is tracing those exact exclusions before unconditional acceptance.
+
+The full original-RTL-vs-R2 attempt reports32 non-equivalent output key points,3025 aborts,256 unmapped golden DFFs and804 revised cutpoints. This is incomplete evidence under that comparison setup, not a proven reset-reachable behavioral bug and not a global proof. Prefer original+CG as the primary physical candidate; keep R2 secondary with explicit proof limits.

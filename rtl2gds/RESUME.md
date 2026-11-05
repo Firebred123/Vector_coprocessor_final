@@ -2,6 +2,10 @@
 
 Coordinator checkpoint: 2026-11-05 around 06:00 IST. Claude Opus 5.5 (`claude-opus-5-5`) reported its five-hour quota exhausted, reset 07:30 Asia/Kolkata. The first exec-session timer exited before its deadline and was replaced around 06:55 IST. A detached one-shot scheduler will message phys-lead and codex-1 at **07:31 IST / 02:01 UTC**. Its current PID and state are in `/tmp/rtl2gds-resume-20261105.json`, with `.log` and `-process.log` alongside it. A second, hub-owned quota-reset wakeup watches phys-lead with idle_for=5548 seconds (last idle start 00:28:32 UTC), targeting the same deadline independently of the local process. Preserve the original all-idle rule; remove only the one-off `RTL2GDS_QUOTA_RESET_20261105` rule after handling it. Check whether phys-lead is already busy before dispatch to avoid duplicate runs. Do not repeatedly call the limited account before reset.
 
+## Updated candidate priority (07:16 IST)
+
+**Primary physical comparison: original RTL baseline `r1_base` versus original RTL plus clock gating `r1_cg`.** Its measured synthesis saving is9.32%. R2 plus clock gating (`r1_r2_cg`,11.84% synthesis saving) is secondary because original-RTL-to-R2 equivalence remains incomplete. Later standalone Conformal comparisons prove R2 RTL to its own gates only. The flattened original-vs-R2 attempt has32 non-equivalent output key points and3025 aborts under its comparison setup; without a reset-reachable witness this does not establish an actual behavioral counterexample, and without successful proof it cannot establish equivalence. The current audit of Conformal ignored outputs/enum/boundary constraints must be resolved before unconditional formal acceptance. This priority supersedes older queued/scheduled briefs naming R2 as primary.
+
 ## Preserved state
 
 - Local branch: `experiment/rtl2gds-area`; flow edits checkpointed in `2ba0d44`. Original design RTL remains unchanged in the local source tree. R2 is isolated in the server candidate tree `cand/r2` and local candidate patches.
@@ -15,7 +19,7 @@ Coordinator checkpoint: 2026-11-05 around 06:00 IST. Claude Opus 5.5 (`claude-op
 
 All three runs use the same implementation SDC, matched gsclib045 slow library and default synthesis effort. Source of numbers: `runs/<run>/genus/reports/qor_ledger.txt` final line and `opt_qor.rpt` Cell Area. Use **standard-cell area**, not design `.area`, which includes estimated net area.
 
-| Run | RTL | Clock gating | Standard-cell area (um2) | Improvement vs accepted baseline | Instances | Sequential instances | ICGs |
+| Run | RTL | Clock gating | Standard-cell area (um2) | Improvement vs comparison baseline | Instances | Sequential instances | ICGs |
 |---|---|---|---:|---:|---:|---:|---:|
 | r1_base | original | off | 91829.685 | baseline | 25923 | 4443 | 0 |
 | r1_cg | original | on | 83267.561 | 9.32% | 25173 | 4471 | 28 |
@@ -34,7 +38,7 @@ These are synthesis results, not routed area or final acceptance. Reports use **
 
 1. Read the full queued reviews and current STATUS.md; verify the saved files and no unfinished native command before proceeding.
 2. method-review is authorized to inspect/run **Conformal batch only**, with artifacts under `verification/method_review_lec` and owned local report `rtl2gds/FORMAL_REVIEW.md`. Coordinate proof ownership before duplicating it. Its report in commit366bc88 is provisional pending coordinator review: identify the one BBOX and all hierarchical subproofs, distinguish R2-RTL-to-netlist from original-RTL-to-R2 proof, and correct ps timing units. It must reject unresolved blackboxes/unmapped/aborted verification and record explicit assumptions. It may not mutate Genus/Innovus.
-3. Implement `r1_base` and the primary cycle-preserving `r1_r2_cg` through Innovus from their existing netlist/SDC outputs. Use independent run directories/checkpoints, matched constraints/corners and a utilization that closes routing and timing. Retain intermediate placement/CTS/route reports. Compare final cell/core/die area only between accepted runs.
+3. Implement `r1_base` and the primary cycle-preserving `r1_cg` through Innovus; keep `r1_r2_cg` as an optional secondary run from their existing netlist/SDC outputs. Use independent run directories/checkpoints, matched constraints/corners and a utilization that closes routing and timing. Retain intermediate placement/CTS/route reports. Compare final cell/core/die area only between accepted runs.
 4. Close geometry/connectivity/antenna and setup/hold checks, validate stream-out layers/cell references and complete formal/equivalence evidence. Record failing or unavailable signoff checks honestly. Do not equate GDS existence or STATUS OK with a passed stage.
 5. Optional R5 latency/area alternatives are authorized as separately labeled experiments if time permits; keep the primary result cycle-preserving. Bug-fix proposals stay separate from this experiment.
 6. Update the stage ledger (currently incomplete beyond attempt0), collect small public result summaries/manifest, commit each meaningful source/flow/report change with rationale locally and on the server, and push the experiment branch. Sync through WorkBoard /tmp staging and verify promoted final-destination hashes. Coordinator observed that pushing a mapped directory `handoff` nested updates under `handoff/handoff` instead of replacing the intended files; explicit leaf-file export corrected this. Treat folder-push success messages as insufficient and check actual destination contents/hashes. Keep proprietary collateral and large databases out of public Git.
