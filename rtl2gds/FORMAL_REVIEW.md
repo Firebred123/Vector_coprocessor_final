@@ -29,10 +29,10 @@ This document establishes the independent formal equivalence verification of the
 
 ### Formal Recommendation for Implementation Study
 1. **Primary Formally Supported Candidate**: **`original+CG` (`r1_cg`)**
-   - **Formally Verified**: 100% equivalent to the original specification across all 4,443 state points (including hierarchical VLSU verification).
+   - **Formally Verified**: Synthesis-equivalence gate accepted under documented Conformal enum, undriven-signal, and X-modeling choices across all 4,443 state points (including hierarchical VLSU verification). This establishes gate equivalence to RTL, but does not constitute physical signoff or proof of ISA correctness.
    - **Synthesis Mechanism**: Replaces flip-flop recirculation feedback multiplexers with 28 Integrated Clock Gating (ICG) cells (`TLATNCAX*`), removing `Q -> mux -> D` short paths during logic synthesis to mitigate post-CTS hold buffer explosion (subject to post-route physical design evaluation).
    - **Silicon Area**: Delivers 83,268 $\mu\text{m}^2$ standard cell area (-9.3% reduction vs `r1_base`).
-   - **Verdict**: Gate netlist is 100% formally verified equivalent to original RTL; accepted as the primary comparison candidate for physical implementation.
+   - **Verdict**: Accepted as the primary comparison candidate for physical implementation.
 2. **Secondary Simulation-Supported Candidate**: **Candidate R2 (`r1_r2_cg`)**
    - **Implementation Milestone**: Gates match Candidate R2 RTL (80,957 $\mu\text{m}^2$ stdcell area, -11.8% vs `r1_base`).
    - **Qualification**: Semantic equivalence between Original RTL and Candidate R2 RTL is **proof incomplete under this comparison setup** due to multi-cycle datapath retiming (256-bit `store_data_q` elimination across VRF port 2). Correctness relies exclusively on bounded testbench simulation (`tb_vcop.sv`). Must be reported with clear architectural qualification.
@@ -87,15 +87,16 @@ A rigorous audit of `/tmp/method_review_lec/hier_r1_cg.do` demonstrates that the
 - **Scope**: All `add_ignored_outputs` directives are **strictly confined to internal submodule `vlsu` boundary pins in Subproof 1**. There are **EXACTLY ZERO ignored outputs on the top-level macro `vector_coprocessor`**.
 - **Exact Pins Ignored in Subproof 1**:
   * **12 Constant Outputs**:
-    - `xif_mem_req_o[mode][1:0]` (tied to constant `2'b10`)
-    - `xif_mem_req_o[size][2:0]` (tied to constant `3'b010`)
-    - `xif_mem_req_o[be][3:0]` (tied to constant `4'b1111`)
-    - `xif_mem_req_o[attr][1:0]` (tied to constant `2'b00`)
-    - `xif_mem_req_o[spec]` (tied to constant `1'b0`)
+    - `xif_mem_req_o[mode][1:0]` (tied to constant `2'b10`, value 2)
+    - `xif_mem_req_o[size][2:0]` (tied to constant `3'b010`, value 2)
+    - `xif_mem_req_o[be][3:0]` (tied to constant `4'b1111`, value 15)
+    - `xif_mem_req_o[attr][1:0]` (tied to constant `2'b00`, value 0)
+    - `xif_mem_req_o[spec]` (tied to constant `1'b0`, value 0)
   * **4 Feedthrough Outputs**:
     - `xif_mem_req_o[id][3:0]` (direct feedthrough from input `id_i[3:0]`)
-- **Compositional Justification**:
+- **Compositional Justification & Netlist Verification**:
   * In leaf submodule `vlsu`, `write_hier_compare_dofile` identifies constant outputs and replaces them with stuck-at assertions (`add_output_stuck_at <val> -Golden -hier`) and pin-equivalences (`add_pin_equivalences {id_i[k]} {xif_mem_req_o[id][k]}`). Because they are not combinational functions of internal leaf states, they are omitted as independent key points in the leaf solver (`add_ignored_outputs`).
+  * **Netlist Confirmation**: In the synthesized revised netlist (`runs/r1_cg/genus/outputs/vector_coprocessor.v`, lines 15250–15261), the 12 metadata constant bits are explicitly driven at the parent level (`mode=2`, `size=2`, `be=15`, `attr=0`, `spec=0`). The 4 ID bits are driven in the parent and connected as `vlsu_inst.id_i`.
   * **Proof of Verification at Chip Primary Outputs**: In Subproof 2 (parent module `vector_coprocessor`), lines 1350–1361 (Golden) and 1510–1521 (Revised) assert the **exact same stuck-at constants on both Golden RTL and the synthesized gate netlist**. Conformal explicitly proves that both Golden and Revised gates drive these identical constant values to the top-level pins. All 154 primary outputs of `vector_coprocessor` are mapped and verified equivalent (0 ignored).
 
 #### 2. Root Cause of "Added 874 don't care(s) due to $constraints" (Line 248 in `r1_cg.log`)
@@ -103,21 +104,25 @@ A rigorous audit of `/tmp/method_review_lec/hier_r1_cg.do` demonstrates that the
   * Subproof 1 (`vlsu`) has **exactly 874 compare points** (324 POs + 550 DFFs = 874).
   * When boundary constraints (`add_output_stuck_at`, `add_pin_equivalences`, `add_ignored_inputs`) and `-enumconstraint` are active, Conformal adds the constraint predicate $C(x)$ to the solver miter of **every compare point in the module**.
   * Conformal emitted message `(F36)` indicating that 1 don't-care constraint predicate was added for each of the 874 compare points in `vlsu`.
-- **Legitimacy of Constraints**:
-  * `-enumconstraint`: In `vlsu.sv`, `state_t` has 3 valid states (`IDLE=2'b00`, `LOAD_ACTIVE=2'b01`, `STORE_ACTIVE=2'b10`). Value `2'b11` is an unmapped SystemVerilog enum state; constraining it to unreachable space is standard and safe.
+- **Proof-Model Scope & Caveat**:
+  * `-enumconstraint`: In `vlsu.sv`, `state_t` has 3 valid states (`IDLE=2'b00`, `LOAD_ACTIVE=2'b01`, `STORE_ACTIVE=2'b10`). Value `2'b11` is an unmapped SystemVerilog enum state; constraining it to unreachable space is standard in RTL synthesis verification.
   * Boundary stuck-ats: 12 constant output values are constrained to their exact RTL-defined values.
   * In Subproof 2 (`vector_coprocessor`), line 411 similarly reports `Added 4646 don't cares due to $constraints` across all 4,646 parent compare points.
+  * **Verification Model Scope**: These constraints remain part of the formal proof model. They verify behavior within the specified enum domain and legal states, but do not establish behavior for illegal out-of-range states, uninitialized X-propagation cases, or invalid instruction encodings.
 
-#### 3. Floating Signals Tied to Z: no *
-- Conformal flags this because `set_undriven_signal 0` was configured.
-- In standard CMOS digital logic, internal signals must not float at high-impedance Z; tying undriven signals to logic 0 prevents false X-propagation in the solver.
-- The only undriven nets in the design are the 10 unused inputs of the OpenHW X-Interface structs (`xif_mem_resp_i.exc`, `exccode[5:0]`, `dbg` and `xif_mem_result_i.err`, `dbg`), which the vector coprocessor architecture does not implement.
+#### 3. Floating Signals Tied to Z: no * (Tool Modeling Assumption)
+- Conformal flags this because `set_undriven_signal 0` was explicitly configured in the verification script.
+- **Tool Modeling Assumption vs Physical Proof**:
+  * This is an explicit verification tool-modeling assumption rather than an intrinsic physical proof.
+  * In the revised netlist, leaf submodule `vlsu` has 16 pruned metadata/feedthrough output pins while their actual macro drivers were moved to the parent top-level module (netlist lines 15250–15261).
+  * At the primary input interface, 10 primary inputs from the OpenHW X-Interface structs (`xif_mem_resp_i.exc`, `exccode[5:0]`, `dbg` and `xif_mem_result_i.err`, `dbg`) are unread by the coprocessor RTL.
+  * `set_undriven_signal 0` resolves unassigned internal nets and unconnected boundary pins to logic 0 rather than high-impedance Z in the solver. This modeling assumption is standard for digital gate-level equivalence checking, but should be understood as a bounded model parameter rather than a generic claim that floating CMOS nodes cannot cause issues.
 
 #### 4. Confirmation from Cadence Baseline LEC Log
 - Inspection of the official baseline synthesis LEC log generated directly by Genus (`runs/baseline/genus/reports/lec.log`, line 966) reveals the **identical** flags:
   * `Floating signals tied to Z: no *`
   * `Command "add ignore outputs" used: yes *`
-- This confirms that these flags are the intrinsic output of Cadence's automated `write_hier_compare_dofile -dynamic_hierarchy` flow, representing verified hierarchical decomposition rather than unchecked functional paths.
+- This confirms that these flags are the intrinsic output of Cadence's automated `write_hier_compare_dofile -dynamic_hierarchy` flow, representing checked compositional decomposition within the documented modeling assumptions.
 
 ### Full Design State Point Accounting
 
