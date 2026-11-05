@@ -182,3 +182,52 @@ proc vi::qor {stage} {
     set f [open $::vi::rdir/reports/qor_ledger.txt a]; puts $f $line; close $f
     return $line
 }
+
+# Two-call wrappers (each under the MCP client idle limit); verbose output goes to
+# <rdir>/reports/*.log and the reply is the QoR ledger line.
+proc vi::front {run genus_run util {aspect 1.0}} {
+    set t0 [clock seconds]
+    catch {freeDesign}
+    set g $::vi::root/runs/$genus_run/genus/outputs
+    set ::vi::rdir $::vi::root/runs/$run/innovus
+    file mkdir $::vi::rdir/reports
+    redirect $::vi::rdir/reports/front.log {
+        vi::init $run $g/vector_coprocessor.v $g/vector_coprocessor.sdc
+        vi::floorplan $util $aspect
+        vi::power
+        vi::place
+        set ::vi::cts_q [vi::cts]
+    }
+    return "$::vi::cts_q runtime=[expr {[clock seconds]-$t0}]s"
+}
+
+proc vi::back {} {
+    set t0 [clock seconds]
+    redirect $::vi::rdir/reports/back.log {
+        vi::route
+        set ::vi::fin_q [vi::finish]
+    }
+    return "$::vi::fin_q runtime=[expr {[clock seconds]-$t0}]s"
+}
+
+# Signoff-style summary pulled from the final reports for the ledger.
+proc vi::signoff_summary {} {
+    set r $::vi::rdir/reports
+    set out {}
+    foreach f {back.log finish.log} {
+        if {![file exists $r/$f]} continue
+        set fh [open $r/$f]; set txt [read $fh]; close $fh
+        foreach l [split $txt "\n"] {
+            if {[regexp {WNS \(ns\)|Violating Paths|Setup mode|Hold mode|max_tran  |Total Violations} $l]} { lappend keep $l }
+        }
+    }
+    if {[info exists keep]} { set out [lrange $keep end-11 end] }
+    foreach f {final_verify_drc.rpt final_verify_conn.rpt final_verify_antenna.rpt} {
+        if {![file exists $r/$f]} { lappend out "$f missing"; continue }
+        set fh [open $r/$f]; set txt [read $fh]; close $fh
+        if {[regexp {Total Violations : (\d+)} $txt -> n]} { lappend out "$f viols=$n" } \
+        elseif {[regexp {Found no problems|No Violations Found} $txt]} { lappend out "$f clean" } \
+        else { lappend out "$f see report" }
+    }
+    return [join $out "\n"]
+}

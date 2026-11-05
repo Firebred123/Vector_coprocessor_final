@@ -31,7 +31,7 @@ namespace eval vc {
 proc vc::setup {run {rtl_dir ""} {opts {}}} {
     variable root; variable kit
     set ::vc::run $run
-    set ::vc::opts [dict merge {clock_gating 0 sdc vector_coprocessor.sdc} $opts]
+    set ::vc::opts [dict merge {clock_gating 0 sdc vector_coprocessor.sdc effort {}} $opts]
     # Super-threading forks helper processes that talk over /dev/shm + sockets; on
     # this shared server that deadlocked syn_map (shm errno=28, master stuck in
     # launch_super_thread_servers vwait). Run in-process only.
@@ -58,6 +58,9 @@ proc vc::setup {run {rtl_dir ""} {opts {}}} {
     set_db use_area_from_lef true
     set_db init_hdl_search_path [list $::vc::rtl_dir/include $::vc::rtl_dir/rtl/include]
     set_db hdl_track_filename_row_col true
+    set e [dict get $::vc::opts effort]
+    # Empty = tool defaults (as used for r1_base / r1_cg / r1_r2_cg).
+    if {$e ne ""} { foreach a {syn_generic_effort syn_map_effort syn_opt_effort} { set_db $a $e } }
     set_db lp_insert_clock_gating [expr {[dict get $::vc::opts clock_gating] ? true : false}]
     set st [list [get_db super_thread_servers] [get_db max_cpus_per_server]]
     return "run=$run rdir=$::vc::rdir rtl=$::vc::rtl_dir opts=$::vc::opts st=$st libs=[get_db libraries .name]"
