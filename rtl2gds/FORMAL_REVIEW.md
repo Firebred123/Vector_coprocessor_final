@@ -23,6 +23,8 @@ This document establishes the independent formal equivalence verification of the
 | **`r1_r2_cg` (R2 RTL)** | Candidate R2 RTL (`cand/r2`) | `runs/r1_r2_cg/genus/outputs/vector_coprocessor.v` | 24,911 (27 ICG) | 80,957.453 | `vlsu`: 324 PO / 294 DFF<br>`top`: 154 PO / 3893 DFF + 1 BBOX | 0 | 0 | **PASS (Equivalent)** |
 | **`r1_r2_cg` (Orig RTL)** | Original RTL (`dbc5fcd`) | `runs/r1_r2_cg/genus/outputs/vector_coprocessor.v` | 24,911 (27 ICG) | 80,957.453 | Combinational diagnostic | N/A | N/A | **UNPROVEN / INCONCLUSIVE** (258 unmapped DFFs) |
 | **`orig_vs_r2_rtl` (Full-Top SEC)** | Original RTL (`dbc5fcd`) | Candidate R2 RTL (`cand/r2`) | RTL-to-RTL | RTL-to-RTL | Flat Top (No BBOX):<br>122 PO EQ, 1164 DFF EQ | 3,025 DFF | 32 PO (`wdata[31:0]`) | **Proof incomplete under this comparison setup** (256 unmapped DFFs, 3025 aborts) |
+| **`r1_base_postroute`** | `r1_base` Genus Netlist | `runs/r1_base_u70/innovus/outputs/vector_coprocessor.final.v` | 26,068 | 86,686.810 | Flat: 154 PO / 4443 DFF | 0 | 0 | **PASS (Equivalent)** |
+| **`r1_cg_postroute`** | `r1_cg` Genus Netlist | `runs/r1_cg_u70/innovus/outputs/vector_coprocessor.final.v` | 25,234 (28 ICG) | 77,849.700 | Flat: 154 PO / 4443 DFF (28 ICG folded) | 0 | 0 | **PASS (Equivalent)** |
 
 > [!IMPORTANT]
 > **Strict Verification Standard**: Formal verification results must never treat unresolved black boxes, unmapped state points, unverified cutpoints, or aborted solver tasks as a PASS. Every comparison is independently executed and verified to 0 Aborts and 0 Non-equivalences.
@@ -133,6 +135,32 @@ $$\text{Total Design DFFs} = \text{DFFs in } vlsu\_inst + \text{DFFs in Top Modu
 - **`r1_cg`**: $550\ (\text{in } vlsu) + 3,893\ (\text{in top}) = \mathbf{4,443\ \text{DFFs}}$ (plus 28 ICG latches modeled and folded).
 - **`r1_r2_cg`**: $294\ (\text{in } vlsu) + 3,893\ (\text{in top}) = \mathbf{4,187\ \text{DFFs}}$ (plus 27 ICG latches = 4,214 sequential instances).
   * Note: $4,443 - 256\ (\text{removed } store\_data\_q) = \mathbf{4,187\ \text{DFFs}}$ (exact mathematical match).
+
+### 2.2 Post-Route Physical P&R / ECO Verification Audit (`r1_base_u70` and `r1_cg_u70`)
+
+To independently verify the final post-route implementation netlists exported from Cadence Innovus 20.10 against their respective Cadence Genus 19.13 technology-mapped netlists, dedicated flat gate-to-gate formal equivalence runs were executed:
+
+#### 1. Baseline Implementation Netlist (`r1_base_postroute`)
+- **Golden Netlist**: `runs/r1_base/genus/outputs/vector_coprocessor.v` (4,655,550 bytes, SHA256: `0689e87255c1f39065c15127b133bd3d98206c8cb2bb96be354452d2426d428b`)
+- **Revised Netlist**: `runs/r1_base_u70/innovus/outputs/vector_coprocessor.final.v` (4,716,868 bytes, SHA256: `0b47145855b2c1658b4d9414926ee0919548de616d000bf1b8aa1656db90942a`)
+- **Script**: [`rtl2gds/formal/run_lec_r1_base_postroute.do`](file:///Users/vs/function/Vector_coprocessor_final/rtl2gds/formal/run_lec_r1_base_postroute.do)
+- **Log**: `verification/method_review_lec/r1_base_postroute.log` (14,297 bytes, SHA256: `bea268891a7f8072dc969c20d1862b2ad09eaee8cdcda3aba4b52840fd100e41`)
+- **Tool Modeling & Physical Audit**:
+  * Functional export audit: Confirmed `vector_coprocessor.final.v` contains zero physical-only filler cells (`FILL*`) and zero power/ground pin clutter in module declarations.
+  * Clock network & cloning: Innovus CCOpt inserted clock buffers and created `clk_i_clone1` inside `vlsu_inst`. Conformal mapped all 4,443 DFFs and 154 POs with zero unmapped points.
+  * Results: **4,597 compared points: 4,597 Equivalent, 0 Non-equivalent, 0 Aborts, 0 Uncompared, 0 Unknown**.
+  * Status: **PASS (100% Equivalent)**.
+
+#### 2. Clock-Gated Candidate with Manual ECO (`r1_cg_postroute`)
+- **Golden Netlist**: `runs/r1_cg/genus/outputs/vector_coprocessor.v` (4,506,747 bytes, SHA256: `4db54594a70b162df23c6add84fc2ef73fc7f99b492342e0cef692597ba0e3e9`)
+- **Revised Netlist**: `runs/r1_cg_u70/innovus/outputs/vector_coprocessor.final.v` (4,425,875 bytes, SHA256: `d3b18a0759cff8ad85d3614b40caa196ca6a9b237615734568d9fee92eaee655`)
+- **Script**: [`rtl2gds/formal/run_lec_r1_cg_postroute.do`](file:///Users/vs/function/Vector_coprocessor_final/rtl2gds/formal/run_lec_r1_cg_postroute.do)
+- **Log**: `verification/method_review_lec/r1_cg_postroute.log` (16,918 bytes, SHA256: `aaaf82d8e4737c2d45e19906fbca65630fce27e9d2d7cf85de7f31c1f4f6fd33`)
+- **Physical Optimizations & ECO Modeling**:
+  * Manual ECO: During physical closure, a manual cell resizing ECO (`INVX1 -> INVX3`) and driver resizing was performed for transition/slew closure.
+  * Clock gating modules: Post-route netlist retains `RC_CG_MOD` with `TLATNTSCAX6 RC_CGIC_INST` and inserted buffers (`FE_OFC*`). Gated-clock directives (`set_flatten_model -gated_clock -latch_fold_gated_clock -seq_constant_icg_latch`) folded all 28 ICG latches into clock pins.
+  * Results: **4,597 compared points: 4,597 Equivalent, 0 Non-equivalent, 0 Aborts, 0 Uncompared, 0 Unknown**. Exactly 28 unreachable DLATs corresponding to folded ICG latches reported in both Golden and Revised; 0 unmapped key points.
+  * Status: **PASS (100% Equivalent)**.
 
 ---
 
@@ -259,10 +287,12 @@ Innovus streamed out GDS `runs/baseline_u70/innovus/outputs/vector_coprocessor.f
 ### Candidate R2 Modified Collateral
 - [`cand/r2/rtl/execution/vlsu.sv`](file:///Users/vs/function/Vector_coprocessor_final/cand/r2/rtl/execution/vlsu.sv): `6e7e5a8018368069ea7c7c4bfffcba18662cc3953621d4f7c364d94d1dd21089`
 
-### Synthesized Gate-Level Netlists
+### Synthesized & Post-Route Gate-Level Netlists
 - `runs/baseline/genus/outputs/vector_coprocessor.v`: `4c58bbb1641a1d0408709fb5e6b4bc54ead46b5604f30d9677f9b7f6d59b6c62` (5,008,576 bytes)
 - `runs/r1_base/genus/outputs/vector_coprocessor.v`: `0689e87255c1f39065c15127b133bd3d98206c8cb2bb96be354452d2426d428b` (4,655,550 bytes)
+- `runs/r1_base_u70/innovus/outputs/vector_coprocessor.final.v`: `0b47145855b2c1658b4d9414926ee0919548de616d000bf1b8aa1656db90942a` (4,716,868 bytes)
 - `runs/r1_cg/genus/outputs/vector_coprocessor.v`: `4db54594a70b162df23c6add84fc2ef73fc7f99b492342e0cef692597ba0e3e9` (4,506,747 bytes)
+- `runs/r1_cg_u70/innovus/outputs/vector_coprocessor.final.v`: `d3b18a0759cff8ad85d3614b40caa196ca6a9b237615734568d9fee92eaee655` (4,425,875 bytes)
 - `runs/r1_r2_cg/genus/outputs/vector_coprocessor.v`: `8077824d3cc5315b789d84091a94cae1fa040641872240ae95bb8bc2c529c732` (4,516,189 bytes)
 
 ### Reproduction Scripts & Logs
@@ -272,9 +302,13 @@ Innovus streamed out GDS `runs/baseline_u70/innovus/outputs/vector_coprocessor.f
 - `r1_r2_cg` script: [`rtl2gds/formal/run_lec_r1_r2_cg.do`](file:///Users/vs/function/Vector_coprocessor_final/rtl2gds/formal/run_lec_r1_r2_cg.do)
 - Sequential divergence diagnostics: [`rtl2gds/formal/run_lec_orig_vs_r1_r2_cg.do`](file:///Users/vs/function/Vector_coprocessor_final/rtl2gds/formal/run_lec_orig_vs_r1_r2_cg.do)
 - Full-top sequential equivalence: [`rtl2gds/formal/run_orig_rtl_vs_r2_rtl_sec.do`](file:///Users/vs/function/Vector_coprocessor_final/rtl2gds/formal/run_orig_rtl_vs_r2_rtl_sec.do)
+- `r1_base` post-route verification: [`rtl2gds/formal/run_lec_r1_base_postroute.do`](file:///Users/vs/function/Vector_coprocessor_final/rtl2gds/formal/run_lec_r1_base_postroute.do)
+- `r1_cg` post-route verification: [`rtl2gds/formal/run_lec_r1_cg_postroute.do`](file:///Users/vs/function/Vector_coprocessor_final/rtl2gds/formal/run_lec_r1_cg_postroute.do)
 - Server log paths:
   * `verification/method_review_lec/r1_base.log` (31,415 bytes)
   * `verification/method_review_lec/r1_cg.log` (33,310 bytes)
   * `verification/method_review_lec/r1_r2_cg.log` (33,668 bytes)
   * `verification/method_review_lec/orig_vs_r1_r2_cg.log` (35,622 bytes)
   * `verification/method_review_lec/orig_rtl_vs_r2_rtl_sec.log` (733,354 bytes, SHA256: `b4acfe013ab77870401b0ace444ee40c8b7b637ac594aec1cd26b30c745f76f0`)
+  * `verification/method_review_lec/r1_base_postroute.log` (14,297 bytes, SHA256: `bea268891a7f8072dc969c20d1862b2ad09eaee8cdcda3aba4b52840fd100e41`)
+  * `verification/method_review_lec/r1_cg_postroute.log` (16,918 bytes, SHA256: `aaaf82d8e4737c2d45e19906fbca65630fce27e9d2d7cf85de7f31c1f4f6fd33`)

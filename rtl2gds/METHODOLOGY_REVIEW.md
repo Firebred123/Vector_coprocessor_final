@@ -338,11 +338,14 @@ Detailed review of the empirical baseline implementation run and proposed method
 ### 10.7 Formal Equivalence Audit & Area Study Recommendations
 An exhaustive formal equivalence campaign using Cadence Conformal LEC (`20.10-p100`) across all regimes establishes the following conclusions (detailed in [`rtl2gds/FORMAL_REVIEW.md`](file:///Users/vs/function/Vector_coprocessor_final/rtl2gds/FORMAL_REVIEW.md)):
 1. **Primary Formally Supported Comparison**: **`original+CG` (`r1_cg`)**
-   - **Formally Verified**: 100% equivalent to the original baseline RTL across all 4,443 state points (including hierarchical VLSU subproof). 0 Aborts, 0 Non-equivalences.
-   - **Hold Mitigation Mechanism**: Replaces recirculation feedback muxes with 28 Integrated Clock Gating (ICG) cells (`TLATNCAX*`), removing `Q -> mux -> D` short paths during synthesis to mitigate post-CTS hold buffer explosion (subject to post-route physical design evaluation).
-   - **Area & Timing**: Delivers 83,268 $\mu\text{m}^2$ standard cell area (-9.3% vs `r1_base` 91,830 $\mu\text{m}^2$), with $+0.0\text{ ps}$ slack.
+   - **Synthesis Gate Equivalence**: Accepted within documented Conformal enum, undriven-signal, and X-modeling choices across all 4,443 state points (including hierarchical VLSU subproof). 0 Aborts, 0 Non-equivalences.
+   - **Post-Route Gate Equivalence (`r1_cg_postroute`)**: Formally verified 100% equivalent between Genus netlist and Innovus post-route netlist with manual `INVX1 -> INVX3` ECO and clock tree insertion (4,597 compare points: 154 POs, 4,443 DFFs; 0 Aborts, 0 Non-equivalences, 0 Unmapped).
+   - **Physical Implementation Metrics (util 0.70)**: Standard cell area **77,849.70 $\mu\text{m}^2$** (25,234 instances, -10.2% area reduction vs `r1_base_u70` 86,686.81 $\mu\text{m}^2$). Timing closed, DRC clean, connectivity clean, antenna clean.
    - **Recommendation**: Serves as the primary, formally supported comparison candidate for the area reduction study.
-2. **Secondary Simulation-Supported Exploration**: **Candidate R2 (`r1_r2_cg`)**
+2. **Baseline Post-Route Implementation (`r1_base_u70`)**:
+   - **Post-Route Gate Equivalence (`r1_base_postroute`)**: Formally verified 100% equivalent between Genus netlist and Innovus post-route netlist (4,597 compare points: 154 POs, 4,443 DFFs; 0 Aborts, 0 Non-equivalences, 0 Unmapped).
+   - **Physical Metrics (util 0.70)**: Standard cell area **86,686.81 $\mu\text{m}^2$** (26,068 instances). DRC clean, connectivity clean, antenna clean.
+3. **Secondary Simulation-Supported Exploration**: **Candidate R2 (`r1_r2_cg`)**
    - **Netlist Equivalence**: Synthesized gates match Candidate R2 RTL (80,957 $\mu\text{m}^2$ stdcell area, -11.8% vs `r1_base`).
    - **Global Verification Reality**: Equivalence proof between Original RTL and Candidate R2 RTL is **incomplete under this comparison setup** (`run_orig_rtl_vs_r2_rtl_sec.do`: 32 non-equivalent cutpoint outputs on `/xif_mem_req_o[wdata][31:0]`, 256 unmapped Golden DFFs, 3,025 abort points). While unconstrained cutpoints diverge without temporal reachability assertions, this does not establish a reset-reachable counterexample witness.
    - **Reason**: The architectural contract of VLSU was changed from a registered snapshot model (`store_data_q`) to a combinational bypass model across VRF port 2. Without inductive protocol invariants guaranteeing VRF stability across multi-beat bursts, formal equivalence cannot be proven under combinational/cutpoint SEC setups.
@@ -362,5 +365,5 @@ An exhaustive formal equivalence campaign using Cadence Conformal LEC (`20.10-p1
 | **CTS Cells** | Action Required | Restrict CCOpt to `CLKBUFX*` / `CLKINVX*` cells in `gsclib045`; `phys-lead` |
 | **Tapcells / Tie-offs**| Action Required | Use `TIEHI`/`TIELO` and `FILL*`; do not call `addWellTap` (no tap macro); `phys-lead` |
 | **Area Metric Suite** | Approved | Compare Genus cell area, Innovus stdcell area, core area, and die area; `phys-lead` |
-| **Formal Equivalence** | Complete | Standalone LEC scripts and report complete; `r1_cg` primary, `r2` secondary; `method-review` |
+| **Formal Equivalence** | Complete | Standalone LEC scripts and report complete; Synthesis & Post-Route P&R PASS; `method-review` |
 | **Functional Gate** | Ready | `tb_vcop.sv` matrix ready for differential validation; `rtl-review` |
