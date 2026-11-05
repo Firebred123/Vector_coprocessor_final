@@ -128,9 +128,15 @@ proc vi::route {} {
     }
     setNanoRouteMode -routeWithTimingDriven true -routeWithSiDriven true \
         -routeTopRoutingLayer 9 -routeBottomRoutingLayer 1
+    # Post-route wire spreading reintroduced M1 parallel-run-length spacing
+    # violations (verify_drc 23 on r1_base_u70); keep it off.
+    setNanoRouteMode -droutePostRouteSpreadWire false
     routeDesign
     setExtractRCMode -engine postRoute
     setAnalysisMode -analysisType onChipVariation
+    # Leave a small margin: at target slack 0 the optimizer stopped at -0.003 ns
+    # on r1_cg_u70 (an in2reg path) and needed a later high-effort pass.
+    setOptMode -effort high -setupTargetSlack 0.02
     optDesign -postRoute -outDir $::vi::rdir/reports/timing_postRoute -prefix postRoute
     optDesign -postRoute -hold -outDir $::vi::rdir/reports/timing_postRoute_hold -prefix postRoute_hold
     saveDesign $::vi::rdir/db/postRoute.enc
@@ -142,7 +148,8 @@ proc vi::finish {} {
     set r $::vi::rdir/reports
     set o $::vi::rdir/outputs
     addFiller -cell {FILL64 FILL32 FILL16 FILL8 FILL4 FILL2 FILL1} -prefix FILLER
-    ecoRoute
+    setNanoRouteMode -droutePostRouteSpreadWire false
+    ecoRoute -fix_drc
     timeDesign -postRoute -outDir $r/timing_signoff -prefix final
     timeDesign -postRoute -hold -outDir $r/timing_signoff_hold -prefix final_hold
     vi::rpt final_area.rpt        { report_area }
