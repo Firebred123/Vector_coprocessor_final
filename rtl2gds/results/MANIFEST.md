@@ -26,3 +26,22 @@ checks record integrity and references only, not DRC or LVS.
 
 Closure procedure: `rtl2gds/flow/innovus_flow.tcl` (vi::front / vi::back). The manual post-route
 steps are in `rtl2gds/flow/recipes/`.
+
+## Post-route equivalence (Conformal, run by method-review; logs checked by phys-lead)
+
+Final routed netlist (revised) vs the Genus netlist it was implemented from (golden). Logs are on the
+server in `verification/method_review_lec/`; dofiles are in method-review commit 99ad791.
+
+| Run | Compared points | Equivalent | Non-EQ / abort / not-compared | Log sha256 |
+|---|---:|---:|---|---|
+| r1_cg_u97 (primary) | 4,597 (154 PO + 4,443 DFF) | 4,597 | 0 / 0 / 0 | 5f9d493c994cb43c3e8e9a250d5e68d29f47a0ad4ca5ff4825b3d61e72dedaea |
+| r1_base_u97 | 4,597 (154 PO + 4,443 DFF) | 4,597 | 0 / 0 / 0 | 44ae2ed3daf70363ad8e5b51a45e6de83f5e0ef565e8192de2c3dd517e3716cf |
+| r1_r2_cg_u97 (secondary) | 4,341 (154 PO + 4,187 DFF) | 4,341 | 0 / 0 / 0 | 56f3b165b85e419f5f399b2330900973d4f05e1a30216fdc0ce69220f7211148 |
+| r1_cg_u70, r1_base_u70 | 4,597 each | 4,597 each | 0 | see FORMAL_ACCEPTANCE.md (coordinator-verified) |
+
+- `add ignore outputs` was not used, and there are no undefined-cell black boxes.
+- The only library-level warning is RTL9.17, a single cell with no output pins.
+- The 28 (27 for R2) unreachable DLATs are the folded ICG latches and appear identically in golden and revised.
+- Golden sha256: r1_cg `4db54594…`, r1_base `0689e872…`, r1_r2_cg `8077824d…`.
+- The RTL->Genus step was accepted separately (FORMAL_ACCEPTANCE.md).
+- For R2, these proofs cover only the R2 implementation. Original-RTL-vs-R2 equivalence is still incomplete.

@@ -64,6 +64,8 @@ Comparisons:
 - Secondary R2+CG at 0.97: die -11.4% vs r1_base_u97. It stays secondary until original-to-R2 equivalence is proven (simulation evidence only).
 - R0 diagnostic (`baseline_u70`, original SDC): not closed (hold -0.312 ns on 6,830 paths, IO setup -5.476 ns, 23 DRC). Kept only to motivate R1.
 
+Post-route equivalence: Conformal, final netlist vs Genus netlist, PASS for r1_cg_u97, r1_base_u97 and r1_r2_cg_u97 (4,597 / 4,597 / 4,341 points, 0 non-EQ/abort). Run by method-review; logs checked by phys-lead. Details and hashes are in `results/MANIFEST.md`. u70 runs: see FORMAL_ACCEPTANCE.md.
+
 GDS structural check (`gds_check.py`, server): every final GDS has one top cell `vector_coprocessor` and 0 undefined cell references. It contains M1..M11/Via1..Via10 on the gpdk045 layer numbers plus base layers from the merged cell GDS. Raw summaries: `rtl2gds/results/run_summaries.txt`.
 
 Closure notes: post-route wire spreading created M1 parallel-run-length spacing errors, so it is disabled and `ecoRoute -fix_drc` is repeated until clean (1-3 passes). r1_cg_u70 needed one manual ECO (INVX1->INVX3 plus ecoPlace) and a high-effort post-route pass. The flow now uses 0.02 ns target slack, and the later runs closed without manual steps.
