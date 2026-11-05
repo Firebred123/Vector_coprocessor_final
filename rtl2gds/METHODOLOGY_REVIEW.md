@@ -316,6 +316,25 @@ Detailed review of the empirical baseline implementation run and proposed method
     ```
   * Alternatively, allow Genus to synthesize discrete latch+AND clock gating (`set_db lp_clock_gating_style latch`).
 
+### 10.4 Formal Equivalence Methodology & Genus `write_do_lec` Hazard
+- **Discovery**: In `flow/genus_flow.tcl`, multiple runs (`baseline`, `r1_base`, `r1_cg`, `r1_r2_cg`) are executed in the same persistent Genus session. Genus 19.13 retains session-level root attributes for formal verification across `delete_obj [get_db designs]`. Consequently, `write_do_lec` in all candidate runs generated dofiles hardcoded to `/runs/baseline/genus/outputs/vector_coprocessor.v` and relied on volatile intermediate `fv/vector_coprocessor/` netlists overwritten across runs.
+- **Remediation**: Independent direct RTL-to-gate dofiles must be maintained (under [`rtl2gds/formal/`](file:///Users/vs/function/Vector_coprocessor_final/rtl2gds/formal/)) that explicitly reference each run's own synthesized netlist and do not rely on volatile session state.
+
+### 10.5 Area Accounting: Cell Area vs Net Area vs Total Area
+- **Evidence**: In `r1_base`, `vc::summary` reported `cell_area = 130723.310 um2`, whereas the leaf instance area sum reported `final std_cell_area = 91829.685 um2`.
+- **Root Cause**: In physical synthesis mode (PLE wire modelling with tech LEF), Genus reports `Total Area = Cell Area + Net Area`.
+  * `Cell Area`: 91,829.685 $\mu\text{m}^2$ (standard cell active silicon area).
+  * `Net Area`: 38,893.625 $\mu\text{m}^2$ (estimated routing wire area).
+  * `Total Area`: 130,723.310 $\mu\text{m}^2$ (returned by `get_db [get_db designs] .area`).
+- **Requirement**: Area comparisons across runs must strictly track `Cell Area` (active silicon footprint) to prevent conflating physical wire estimates with silicon area.
+
+### 10.6 Physical Signoff Realities (`baseline_u70`)
+- **Evidence**: Innovus P&R streamed out `runs/baseline_u70/innovus/outputs/vector_coprocessor.final.gds` (70.5 MB).
+- **Signoff Reality**: This layout is an intermediate implementation milestone, NOT a tapeout-clean signoff layout:
+  * `verify_drc` reports **23 geometry DRC violations**: 20 on Metal 1 and 3 on Metal 2 (`ParallelRunLength Spacing` violations).
+  * The kit lacks signoff Calibre DRC/LVS decks; signoff DRC/LVS has not been run.
+  * Extraction was performed using native Innovus captable extraction due to LEF/QRC layer naming discrepancies, rather than signoff Quantus QRC.
+
 ---
 
 ## 11. Action Checklist & Responsibilities
@@ -330,5 +349,5 @@ Detailed review of the empirical baseline implementation run and proposed method
 | **CTS Cells** | Action Required | Restrict CCOpt to `CLKBUFX*` / `CLKINVX*` cells in `gsclib045`; `phys-lead` |
 | **Tapcells / Tie-offs**| Action Required | Use `TIEHI`/`TIELO` and `FILL*`; do not call `addWellTap` (no tap macro); `phys-lead` |
 | **Area Metric Suite** | Approved | Compare Genus cell area, Innovus stdcell area, core area, and die area; `phys-lead` |
-| **Formal Equivalence** | Ready | Conformal LEC dofile generation integrated into flow; `phys-lead` |
+| **Formal Equivalence** | In Progress | Standalone reproducible LEC scripts and review owned by `method-review` |
 | **Functional Gate** | Ready | `tb_vcop.sv` matrix ready for differential validation; `rtl-review` |
