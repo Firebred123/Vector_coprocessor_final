@@ -337,19 +337,21 @@ Detailed review of the empirical baseline implementation run and proposed method
 
 ### 10.7 Formal Equivalence Audit & Area Study Recommendations
 An exhaustive formal equivalence campaign using Cadence Conformal LEC (`20.10-p100`) across all regimes establishes the following conclusions (detailed in [`rtl2gds/FORMAL_REVIEW.md`](file:///Users/vs/function/Vector_coprocessor_final/rtl2gds/FORMAL_REVIEW.md)):
-1. **Primary Formally Supported Comparison**: **`original+CG` (`r1_cg`)**
+1. **Primary Formally Supported Comparison & Density Winner**: **`original+CG` (`r1_cg` / `r1_cg_u97`)**
    - **Synthesis Gate Equivalence**: Accepted within documented Conformal enum, undriven-signal, and X-modeling choices across all 4,443 state points (including hierarchical VLSU subproof). 0 Aborts, 0 Non-equivalences.
-   - **Post-Route Gate Equivalence (`r1_cg_postroute`)**: Formally verified 100% equivalent between Genus netlist and Innovus post-route netlist with manual `INVX1 -> INVX3` ECO and clock tree insertion (4,597 compare points: 154 POs, 4,443 DFFs; 0 Aborts, 0 Non-equivalences, 0 Unmapped).
-   - **Physical Implementation Metrics (util 0.70)**: Standard cell area **77,849.70 $\mu\text{m}^2$** (25,234 instances, -10.2% area reduction vs `r1_base_u70` 86,686.81 $\mu\text{m}^2$). Timing closed, DRC clean, connectivity clean, antenna clean.
-   - **Recommendation**: Serves as the primary, formally supported comparison candidate for the area reduction study.
-2. **Baseline Post-Route Implementation (`r1_base_u70`)**:
-   - **Post-Route Gate Equivalence (`r1_base_postroute`)**: Formally verified 100% equivalent between Genus netlist and Innovus post-route netlist (4,597 compare points: 154 POs, 4,443 DFFs; 0 Aborts, 0 Non-equivalences, 0 Unmapped).
-   - **Physical Metrics (util 0.70)**: Standard cell area **86,686.81 $\mu\text{m}^2$** (26,068 instances). DRC clean, connectivity clean, antenna clean.
-3. **Secondary Simulation-Supported Exploration**: **Candidate R2 (`r1_r2_cg`)**
-   - **Netlist Equivalence**: Synthesized gates match Candidate R2 RTL (80,957 $\mu\text{m}^2$ stdcell area, -11.8% vs `r1_base`).
-   - **Global Verification Reality**: Equivalence proof between Original RTL and Candidate R2 RTL is **incomplete under this comparison setup** (`run_orig_rtl_vs_r2_rtl_sec.do`: 32 non-equivalent cutpoint outputs on `/xif_mem_req_o[wdata][31:0]`, 256 unmapped Golden DFFs, 3,025 abort points). While unconstrained cutpoints diverge without temporal reachability assertions, this does not establish a reset-reachable counterexample witness.
+   - **Post-Route Gate Equivalence (`r1_cg_u97_postroute`)**: Formally verified 100% equivalent between Genus netlist and Innovus post-route netlist at winning target utilization 0.97 without manual ECO (4,597 compare points: 154 POs, 4,443 DFFs; 0 Aborts, 0 Non-equivalences, 0 Unmapped key points, 28 folded ICG latches).
+   - **Physical Implementation Metrics (util 0.97 Winner)**: Standard cell area **77,650.93 $\mu\text{m}^2$** (24,984 instances), die area **93,076.59 $\mu\text{m}^2$** (-9.0% die area vs `r1_base_u97` 102,285.55 $\mu\text{m}^2$; -27.0% die area vs `r1_cg_u70` 127,472.63 $\mu\text{m}^2$). Timing closed (+0.018 ns setup, +0.070 ns hold), 0 DRC violations, connectivity and antenna clean.
+   - **Intermediate Reference (`r1_cg_u70`)**: Also verified 100% equivalent post-route with manual `INVX1 -> INVX3` ECO (4,597 compare points, 0 Non-EQ, 0 Aborts).
+   - **Recommendation**: Serves as the primary, fully formally supported comparison candidate for the area reduction study.
+2. **Equal-Density Baseline Implementation Reference (`r1_base_u97`)**:
+   - **Post-Route Gate Equivalence (`r1_base_u97_postroute`)**: Formally verified 100% equivalent between Genus netlist and Innovus post-route netlist (4,597 compare points: 154 POs, 4,443 DFFs; 0 Aborts, 0 Non-equivalences, 0 Unmapped).
+   - **Physical Metrics (util 0.97 Baseline)**: Standard cell area **86,290.19 $\mu\text{m}^2$** (25,836 instances), die area **102,285.55 $\mu\text{m}^2$**.
+   - **Intermediate Reference (`r1_base_u70`)**: Standard cell area 86,686.81 $\mu\text{m}^2$, die area 140,087.53 $\mu\text{m}^2$. Formally verified 100% equivalent.
+3. **Secondary Simulation-Supported Exploration**: **Candidate R2 (`r1_r2_cg` / `r1_r2_cg_u97`)**
+   - **Implementation Netlist Equivalence (`r1_r2_cg_u97_postroute`)**: Formally verified 100% equivalent between Genus netlist and Innovus post-route netlist (4,341 compare points: 154 POs, 4,187 DFFs; 0 Aborts, 0 Non-equivalences, 0 Unmapped). Standard cell area 76,004.73 $\mu\text{m}^2$, die area 90,610.54 $\mu\text{m}^2$.
+   - **Global Verification Reality**: Equivalence proof between Original RTL and Candidate R2 RTL remains **incomplete under this comparison setup** (`run_orig_rtl_vs_r2_rtl_sec.do`: 32 non-equivalent cutpoint outputs on `/xif_mem_req_o[wdata][31:0]`, 256 unmapped Golden DFFs, 3,025 abort points). While unconstrained cutpoints diverge without temporal reachability assertions, this does not establish a reset-reachable counterexample witness.
    - **Reason**: The architectural contract of VLSU was changed from a registered snapshot model (`store_data_q`) to a combinational bypass model across VRF port 2. Without inductive protocol invariants guaranteeing VRF stability across multi-beat bursts, formal equivalence cannot be proven under combinational/cutpoint SEC setups.
-   - **Recommendation**: Candidate R2 is supported only by bounded differential simulation (`tb_vcop.sv`) and must be presented with clear architectural qualifications, not as an unconstrained drop-in replacement.
+   - **Recommendation**: Candidate R2 is supported by bounded differential simulation (`tb_vcop.sv`) and post-route implementation equivalence, but must be presented with clear architectural qualifications, not as a formally proven drop-in replacement for the original RTL.
 
 ---
 

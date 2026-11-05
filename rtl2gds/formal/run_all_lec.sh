@@ -69,11 +69,20 @@ run_lec "orig_vs_r1_r2_cg" "${SCRIPT_DIR}/run_lec_orig_vs_r1_r2_cg.do"
 # Run 5: orig_rtl_vs_r2_rtl_sec (Original RTL vs Candidate R2 RTL - Full-top Sequential Equivalence)
 run_lec "orig_rtl_vs_r2_rtl_sec" "${SCRIPT_DIR}/run_orig_rtl_vs_r2_rtl_sec.do"
 
-# Run 6: r1_base_postroute (Genus Netlist vs Innovus Post-Route Netlist)
+# Run 6: r1_base_postroute (Genus Netlist vs Innovus Post-Route Netlist @ u70)
 run_lec "r1_base_postroute" "${SCRIPT_DIR}/run_lec_r1_base_postroute.do"
 
-# Run 7: r1_cg_postroute (Genus Netlist vs Innovus Post-Route Netlist with ECO)
+# Run 7: r1_cg_postroute (Genus Netlist vs Innovus Post-Route Netlist with ECO @ u70)
 run_lec "r1_cg_postroute" "${SCRIPT_DIR}/run_lec_r1_cg_postroute.do"
+
+# Run 8: r1_cg_u97_postroute (PRIMARY: density winner @ u97)
+run_lec "r1_cg_u97_postroute" "${SCRIPT_DIR}/run_lec_r1_cg_u97_postroute.do"
+
+# Run 9: r1_base_u97_postroute (REFERENCE: baseline @ u97)
+run_lec "r1_base_u97_postroute" "${SCRIPT_DIR}/run_lec_r1_base_u97_postroute.do"
+
+# Run 10: r1_r2_cg_u97_postroute (SECONDARY: R2 + CG candidate @ u97)
+run_lec "r1_r2_cg_u97_postroute" "${SCRIPT_DIR}/run_lec_r1_r2_cg_u97_postroute.do"
 
 echo "=========================================================="
 echo "All LEC runs completed."
