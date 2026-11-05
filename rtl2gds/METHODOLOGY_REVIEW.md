@@ -335,6 +335,19 @@ Detailed review of the empirical baseline implementation run and proposed method
   * The kit lacks signoff Calibre DRC/LVS decks; signoff DRC/LVS has not been run.
   * Extraction was performed using native Innovus captable extraction due to LEF/QRC layer naming discrepancies, rather than signoff Quantus QRC.
 
+### 10.7 Formal Equivalence Audit & Area Study Recommendations
+An exhaustive formal equivalence campaign using Cadence Conformal LEC (`20.10-p100`) across all regimes establishes the following conclusions (detailed in [`rtl2gds/FORMAL_REVIEW.md`](file:///Users/vs/function/Vector_coprocessor_final/rtl2gds/FORMAL_REVIEW.md)):
+1. **Primary Formally Supported Comparison**: **`original+CG` (`r1_cg`)**
+   - **Formally Verified**: 100% equivalent to the original baseline RTL across all 4,443 state points (including hierarchical VLSU subproof). 0 Aborts, 0 Non-equivalences.
+   - **Hold Crisis Solution**: Replaces recirculation feedback muxes with 28 Integrated Clock Gating (ICG) cells (`TLATNCAX*`), eliminating the short-path hold violations that triggered 8,700 delay buffer insertions post-CTS.
+   - **Area & Timing**: Delivers 83,268 $\mu\text{m}^2$ standard cell area (-9.3% vs `r1_base` 91,830 $\mu\text{m}^2$), with $+0.0\text{ ps}$ slack.
+   - **Recommendation**: Serves as the primary, formally supported comparison candidate for the area reduction study.
+2. **Secondary Simulation-Supported Exploration**: **Candidate R2 (`r1_r2_cg`)**
+   - **Netlist Equivalence**: Synthesized gates match Candidate R2 RTL (80,957 $\mu\text{m}^2$ stdcell area, -11.8% vs `r1_base`).
+   - **Global Verification Reality**: Equivalence between Original RTL and Candidate R2 RTL is **formally inconclusive / non-equivalent under unconstrained formal verification** (`run_orig_rtl_vs_r2_rtl_sec.do`: 32 Non-equivalent POs on `/xif_mem_req_o[wdata][31:0]`, 256 unmapped Golden DFFs, 3,025 abort points).
+   - **Reason**: The architectural contract of VLSU was changed from a registered snapshot model (`store_data_q`) to a combinational bypass model across VRF port 2. Without inductive protocol invariants guaranteeing VRF stability across multi-beat bursts, formal equivalence cannot be proven.
+   - **Recommendation**: Candidate R2 is supported only by bounded differential simulation (`tb_vcop.sv`) and must be presented with clear architectural qualifications, not as an unconstrained drop-in replacement.
+
 ---
 
 ## 11. Action Checklist & Responsibilities
@@ -349,5 +362,5 @@ Detailed review of the empirical baseline implementation run and proposed method
 | **CTS Cells** | Action Required | Restrict CCOpt to `CLKBUFX*` / `CLKINVX*` cells in `gsclib045`; `phys-lead` |
 | **Tapcells / Tie-offs**| Action Required | Use `TIEHI`/`TIELO` and `FILL*`; do not call `addWellTap` (no tap macro); `phys-lead` |
 | **Area Metric Suite** | Approved | Compare Genus cell area, Innovus stdcell area, core area, and die area; `phys-lead` |
-| **Formal Equivalence** | In Progress | Standalone reproducible LEC scripts and review owned by `method-review` |
+| **Formal Equivalence** | Complete | Standalone LEC scripts and report complete; `r1_cg` primary, `r2` secondary; `method-review` |
 | **Functional Gate** | Ready | `tb_vcop.sv` matrix ready for differential validation; `rtl-review` |

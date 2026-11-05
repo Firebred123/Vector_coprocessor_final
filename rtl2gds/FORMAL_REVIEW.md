@@ -15,16 +15,27 @@ This document establishes the independent formal equivalence verification of the
 
 ### Formal Equivalence Ledger
 
-| Run Label | Golden Source | Revised Netlist Path | Gate Count / Insts | Std Cell Area ($\mu\text{m}^2$) | Hierarchical Subproofs | Abort Points | Non-EQ Points | Formal Proof Status |
+| Run Label | Golden Source | Revised Netlist / Design Path | Gate Count / Insts | Std Cell Area ($\mu\text{m}^2$) | Hierarchical Subproofs | Abort Points | Non-EQ Points | Formal Proof Status |
 | :--- | :--- | :--- | :--- | :--- | :--- | :---: | :---: | :--- |
-| **`baseline`** | Original RTL (`dbc5fcd`) | `runs/baseline/genus/outputs/vector_coprocessor.v` | 28,237 | 98,768.125 | Flat: 154 PO / 4443 DFF | 0 | 0 | **PASS (Equivalent)** |
+| **`baseline`** | Original RTL (`dbc5fcd`) | `runs/baseline/genus/outputs/vector_coprocessor.v` | 28,237 | 98,768.125 | `vlsu`: 324 PO / 550 DFF<br>`top`: 154 PO / 3893 DFF + 1 BBOX | 0 | 0 | **PASS (Equivalent)** |
 | **`r1_base`** | Original RTL (`dbc5fcd`) | `runs/r1_base/genus/outputs/vector_coprocessor.v` | 25,923 | 91,829.685 | `vlsu`: 324 PO / 550 DFF<br>`top`: 154 PO / 3893 DFF + 1 BBOX | 0 | 0 | **PASS (Equivalent)** |
 | **`r1_cg`** | Original RTL (`dbc5fcd`) | `runs/r1_cg/genus/outputs/vector_coprocessor.v` | 25,173 (28 ICG) | 83,267.561 | `vlsu`: 324 PO / 550 DFF<br>`top`: 154 PO / 3893 DFF + 1 BBOX | 0 | 0 | **PASS (Equivalent)** |
 | **`r1_r2_cg` (R2 RTL)** | Candidate R2 RTL (`cand/r2`) | `runs/r1_r2_cg/genus/outputs/vector_coprocessor.v` | 24,911 (27 ICG) | 80,957.453 | `vlsu`: 324 PO / 294 DFF<br>`top`: 154 PO / 3893 DFF + 1 BBOX | 0 | 0 | **PASS (Equivalent)** |
-| **`r1_r2_cg` (Orig RTL)** | Original RTL (`dbc5fcd`) | `runs/r1_r2_cg/genus/outputs/vector_coprocessor.v` | 24,911 (27 ICG) | 80,957.453 | 258 unmapped DFFs in Golden | N/A | N/A | **UNPROVEN / INCONCLUSIVE** |
+| **`r1_r2_cg` (Orig RTL)** | Original RTL (`dbc5fcd`) | `runs/r1_r2_cg/genus/outputs/vector_coprocessor.v` | 24,911 (27 ICG) | 80,957.453 | Combinational diagnostic | N/A | N/A | **UNPROVEN / INCONCLUSIVE** (258 unmapped DFFs) |
+| **`orig_vs_r2_rtl` (Full-Top SEC)** | Original RTL (`dbc5fcd`) | Candidate R2 RTL (`cand/r2`) | RTL-to-RTL | RTL-to-RTL | Flat Top (No BBOX):<br>122 PO EQ, 1164 DFF EQ | 3,025 DFF | 32 PO (`wdata[31:0]`) | **NON-EQUIVALENT / INCONCLUSIVE** (256 unmapped DFFs) |
 
 > [!IMPORTANT]
 > **Strict Verification Standard**: Formal verification results must never treat unresolved black boxes, unmapped state points, unverified cutpoints, or aborted solver tasks as a PASS. Every comparison is independently executed and verified to 0 Aborts and 0 Non-equivalences.
+
+### Formal Recommendation for Implementation Study
+1. **Primary Formally Supported Candidate**: **`original+CG` (`r1_cg`)**
+   - **Formally Verified**: 100% equivalent to the original specification across all 4,443 state points (including hierarchical VLSU verification).
+   - **Hold Crisis Solution**: Replaces recirculation feedback muxes with 28 Integrated Clock Gating (ICG) cells (`TLATNCAX*`), eliminating the short-path hold violations that triggered 8,700 delay buffer insertions post-CTS.
+   - **Silicon Area**: Delivers 83,268 $\mu\text{m}^2$ standard cell area (-9.3% reduction vs `r1_base`).
+   - **Verdict**: Fully closed, zero architectural risk, drop-in replacement.
+2. **Secondary Simulation-Supported Candidate**: **Candidate R2 (`r1_r2_cg`)**
+   - **Implementation Milestone**: Gates match Candidate R2 RTL (80,957 $\mu\text{m}^2$ stdcell area, -11.8% vs `r1_base`).
+   - **Qualification**: Semantic equivalence between Original RTL and Candidate R2 RTL is **formally inconclusive / unproven** due to multi-cycle datapath retiming (256-bit `store_data_q` elimination across VRF port 2). Correctness relies exclusively on bounded testbench simulation (`tb_vcop.sv`). Must be reported with clear architectural qualification.
 
 ---
 
@@ -67,7 +78,7 @@ vector_coprocessor (Top-level)
 
 $$\text{Total Design DFFs} = \text{DFFs in } vlsu\_inst + \text{DFFs in Top Module}$$
 
-- **`baseline`**: 4,443 DFFs (flat compare: 4,443 DFFs).
+- **`baseline`**: $550\ (\text{in } vlsu) + 3,893\ (\text{in top}) = \mathbf{4,443\ \text{DFFs}}$ (Hierarchical proof in `runs/baseline/genus/reports/lec.log`: 2 module pairs, initial 3,023 aborts resolved by `analyze abort -compare`).
 - **`r1_base`**: $550\ (\text{in } vlsu) + 3,893\ (\text{in top}) = \mathbf{4,443\ \text{DFFs}}$ (exact match to baseline).
 - **`r1_cg`**: $550\ (\text{in } vlsu) + 3,893\ (\text{in top}) = \mathbf{4,443\ \text{DFFs}}$ (plus 28 ICG latches modeled and folded).
 - **`r1_r2_cg`**: $294\ (\text{in } vlsu) + 3,893\ (\text{in top}) = \mathbf{4,187\ \text{DFFs}}$ (plus 27 ICG latches = 4,214 sequential instances).
@@ -75,19 +86,55 @@ $$\text{Total Design DFFs} = \text{DFFs in } vlsu\_inst + \text{DFFs in Top Modu
 
 ---
 
-## 3. Candidate R2 Equivalence Status: Globally Unproven
+## 3. Candidate R2 Equivalence Status: Formally Inconclusive & Divergent
 
-While `r1_r2_cg` is **100% formally equivalent to Candidate R2 RTL**, the global semantic equivalence between **Original RTL** and **Candidate R2 RTL** remains **UNPROVEN / INCONCLUSIVE**:
+While `r1_r2_cg` is **100% formally equivalent to Candidate R2 RTL**, the global semantic equivalence between **Original RTL** and **Candidate R2 RTL** is **FORMALLY INCONCLUSIVE / NON-EQUIVALENT** under unconstrained formal verification:
 
-1. **258 Unmapped State Points**:
-   Direct comparison between Original RTL and `r1_r2_cg` netlist in Conformal LEC identifies 258 unmapped DFF key points in Golden:
-   * 256 DFFs of `/vlsu_inst/store_data_q_reg[255:0]`.
-   * 2 DFFs of `/rs1_q_reg[4]` and `/rs2_q_reg[4]`.
-2. **Sequential Re-Timing Boundary**:
-   In Original RTL, store burst data is latched into `store_data_q` in the first cycle. In Candidate R2, `store_data_q` is eliminated and store data is read combinationally from VRF port 2 across the burst. Because combinational LEC cuts state feedback at register boundaries, it cannot prove functional equivalence across cycle-re-timed boundaries.
-3. **Simulation Limitations**:
-   Sampled differential simulation (`tb_vcop.sv`) tests discrete stimulus sequences, but does not provide exhaustive formal proof of semantic equivalence across all possible concurrent instruction issues and corner cases.
-4. **Verdict**: Candidate R2 is proven to match its own synthesized gates, but its equivalence to the original baseline RTL specification is **formally inconclusive**.
+### 3.1 Full-Top Sequential Equivalence Run (`orig_rtl_vs_r2_rtl_sec.do`)
+To independently evaluate whether Cadence Conformal LEC could establish global sequential equivalence across the modified VLSU boundary without blackboxing, a flat RTL-to-RTL sequential verification run was executed:
+- **Script**: [`rtl2gds/formal/run_orig_rtl_vs_r2_rtl_sec.do`](file:///Users/vs/function/Vector_coprocessor_final/rtl2gds/formal/run_orig_rtl_vs_r2_rtl_sec.do)
+- **Log**: `verification/method_review_lec/orig_rtl_vs_r2_rtl_sec.log` (717 KB, SHA256: `b4acfe013ab77870401b0ace444ee40c8b7b637ac594aec1cd26b30c745f76f0`)
+- **Directives**: Full model flattening across VLSU boundary (`set_flatten_model -seq_constant -hier_seq_merge -balanced_modeling`), with 4 parallel solver threads.
+
+#### Key Point Mapping & Comparison Ledger
+| Category | Golden (Original RTL) | Revised (Candidate R2 RTL) | Verification Status / Details |
+| :--- | :---: | :---: | :--- |
+| **Primary Inputs** | 169 | 169 | 100% Mapped |
+| **Primary Outputs** | 154 | 154 | **122 Equivalent**, **32 Non-equivalent** |
+| **Non-Equivalent POs** | `/xif_mem_req_o[wdata][31:0]` | `/xif_mem_req_o[wdata][31:0]` | **Divergence on all 32 memory write data bits** |
+| **Sequential DFF Points** | 4,925 | 4,669 | 4,189 Mapped: **1,164 Equivalent**, **3,025 Abort** |
+| **Unmapped Points (Golden)** | 256 DFFs | 0 | **`store_data_q_reg[255:0]` completely unmapped** |
+| **Unmapped Points (Revised)**| 0 | 804 cutpoints | Cutpoint boundary artifacts (`n57`, `n182_10`) |
+| **Unreachable DFFs** | 480 | 480 | Pruned registers (v0 and unused control) |
+| **Merged Sequential Points** | 255 | 255 | v0 sequential constants folded |
+
+### 3.2 Root-Cause Analysis of Sequential Divergence
+1. **Architectural Contract Modification in VLSU**:
+   - In **Original RTL** (`rtl/execution/vlsu.sv`):
+     ```verilog
+     // Data snapshot captured into flip-flops on instruction issue
+     always_ff @(posedge clk_i or negedge rst_ni) begin
+       if (!rst_ni) store_data_q <= '0;
+       else if (issue_req_valid && is_store) store_data_q <= rdata2_i;
+     end
+     assign xif_mem_req_o.wdata = store_data_q[32*beat_count +: 32];
+     ```
+   - In **Candidate R2 RTL** (`cand/r2/rtl/execution/vlsu.sv`):
+     ```verilog
+     // store_data_q registers completely eliminated; combinational bypass
+     assign xif_mem_req_o.wdata = rdata2_i[32*beat_count +: 32];
+     ```
+2. **Failure of Unconstrained Equivalence**:
+   - In Golden RTL, `wdata` is driven from a dedicated 256-bit register buffer captured at cycle 0.
+   - In Candidate R2, `wdata` is driven combinationally from VRF read port 2 throughout the multi-beat burst (`beat_count = 0..7`).
+   - Without complex user-supplied inductive assertions on the external interface (guaranteeing that no instruction writes to VRF during a pending store burst and that `raddr2` remains stable), Conformal's SAT engine proves that `wdata` can differ between Golden and Revised.
+   - Consequently, all 32 bits of `/xif_mem_req_o[wdata][31:0]` evaluate as **Non-equivalent**, and 3,025 state points abort.
+3. **No Waiving / No Pseudo-Proof Standard**:
+   - Waiving the 256 unmapped state points of `store_data_q` or blackboxing VLSU to claim proof would violate formal verification integrity.
+   - Global equivalence between Original RTL and Candidate R2 RTL is **unproven and inconclusive**.
+4. **Simulation Caveat**:
+   - Sampled testbench simulation (`tb_vcop.sv`) confirms that under legal stimulus sequences where VRF hazards do not occur, the coprocessor outputs correct store data.
+   - However, bounded simulation covers only a finite subspace of execution sequences and cannot substitute for mathematical proof of global semantic equivalence.
 
 ---
 
@@ -176,8 +223,10 @@ Innovus streamed out GDS `runs/baseline_u70/innovus/outputs/vector_coprocessor.f
 - `r1_cg` script: [`rtl2gds/formal/run_lec_r1_cg.do`](file:///Users/vs/function/Vector_coprocessor_final/rtl2gds/formal/run_lec_r1_cg.do)
 - `r1_r2_cg` script: [`rtl2gds/formal/run_lec_r1_r2_cg.do`](file:///Users/vs/function/Vector_coprocessor_final/rtl2gds/formal/run_lec_r1_r2_cg.do)
 - Sequential divergence diagnostics: [`rtl2gds/formal/run_lec_orig_vs_r1_r2_cg.do`](file:///Users/vs/function/Vector_coprocessor_final/rtl2gds/formal/run_lec_orig_vs_r1_r2_cg.do)
+- Full-top sequential equivalence: [`rtl2gds/formal/run_orig_rtl_vs_r2_rtl_sec.do`](file:///Users/vs/function/Vector_coprocessor_final/rtl2gds/formal/run_orig_rtl_vs_r2_rtl_sec.do)
 - Server log paths:
   * `verification/method_review_lec/r1_base.log` (31,415 bytes)
   * `verification/method_review_lec/r1_cg.log` (33,310 bytes)
   * `verification/method_review_lec/r1_r2_cg.log` (33,668 bytes)
   * `verification/method_review_lec/orig_vs_r1_r2_cg.log` (35,622 bytes)
+  * `verification/method_review_lec/orig_rtl_vs_r2_rtl_sec.log` (733,354 bytes, SHA256: `b4acfe013ab77870401b0ace444ee40c8b7b637ac594aec1cd26b30c745f76f0`)

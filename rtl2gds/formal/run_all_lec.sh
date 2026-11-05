@@ -66,6 +66,9 @@ run_lec "r1_r2_cg" "${SCRIPT_DIR}/run_lec_r1_r2_cg.do"
 # Run 4: orig_vs_r1_r2_cg (Golden: Original RTL - Sequential Divergence Diagnostics)
 run_lec "orig_vs_r1_r2_cg" "${SCRIPT_DIR}/run_lec_orig_vs_r1_r2_cg.do"
 
+# Run 5: orig_rtl_vs_r2_rtl_sec (Original RTL vs Candidate R2 RTL - Full-top Sequential Equivalence)
+run_lec "orig_rtl_vs_r2_rtl_sec" "${SCRIPT_DIR}/run_orig_rtl_vs_r2_rtl_sec.do"
+
 echo "=========================================================="
 echo "All LEC runs completed."
 echo "=========================================================="
