@@ -59,7 +59,7 @@ All rows below are fully closed: setup and hold have 0 violating paths, 0 max_tr
 | r1_r2_cg_u97 (secondary) | R2 + CG | 0.97 / 0.910 | 76,004.73 | 83,483.57 | 90,610.54 | +0.011 | +0.070 |
 
 Comparisons:
-- Clock gating at equal constraints and equal target utilization: die -9.4% at 0.70 (140,088 -> 127,473) and **-9.0% at 0.97 (102,286 -> 93,077)**. Final cell area -10.2% / -10.0%.
+- Clock gating at equal constraints and equal target utilization: die -9.0% at 0.70 (140,088 -> 127,473) and **-9.0% at 0.97 (102,286 -> 93,077)**. Final cell area -10.2% / -10.0%.
 - Primary best result vs the 0.70 baseline: die **-33.6%** (140,088 -> 93,077). About 27 points of that come from floorplan density, which the baseline also reaches (r1_base_u97). The RTL/flow saving itself is the 9.0% at equal utilization.
 - Secondary R2+CG at 0.97: die -11.4% vs r1_base_u97. It stays secondary until original-to-R2 equivalence is proven (simulation evidence only).
 - R0 diagnostic (`baseline_u70`, original SDC): not closed (hold -0.312 ns on 6,830 paths, IO setup -5.476 ns, 23 DRC). Kept only to motivate R1.

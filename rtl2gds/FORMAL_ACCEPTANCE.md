@@ -31,3 +31,11 @@ The coordinator independently inspected both native Conformal log summaries and 
 | `r1_cg_u70` | `d3b18a0759cff8ad85d3614b40caa196ca6a9b237615734568d9fee92eaee655` | `aaaf82d8e4737c2d45e19906fbca65630fce27e9d2d7cf85de7f31c1f4f6fd33` |
 
 Logs reside in server `verification/method_review_lec/`; exact standalone comparison scripts are committed in `rtl2gds/formal/`. Any later density winner requires its own final-netlist comparison and artifact hashes before inheriting this acceptance.
+
+## Final density winner: 97% target utilization
+
+The coordinator independently inspected the native postroute Conformal results and verified final-netlist and log SHA256 values against `results/MANIFEST.md`. Both `r1_cg_u97` (primary winner) and `r1_base_u97` (equal-utilization reference) pass all 4597 comparison points, with zero non-equivalent, aborted, unknown or uncompared points. No undefined-cell blackboxes or ignored outputs are used. The same 28 folded ICG latches appear as unreachable on both sides of the clock-gated comparison. The final functional netlist hashes are `629c804e67f9ccd643cccb1752c369185f9467e21a700406146e72e2c0e89a69` and `0b65c72d6500ffc72dc9b7634e9b3079076550051c699e0fa3325f0aec39886e`, respectively.
+
+The secondary `r1_r2_cg_u97` also passes its 4341 implementation comparison points; final-netlist SHA256 is `afc54f414c273111cb1835114f084ff04528e990dec115c47aae7a892620f45e`. This establishes implementation equivalence to the R2 synthesis netlist only. Original RTL to R2 remains unproven, so it does not displace the primary winner.
+
+Primary final die area is 93076.59 um2 versus 102285.55 um2 for the equal-utilization baseline (9.0% reduction); final cell area is 77650.93 versus 86290.19 um2 (10.0% reduction). These accepted experiment results retain the modeling, constraint, educational-library and physical-signoff limits documented above and in STATUS.md.
